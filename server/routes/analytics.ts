@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { db } from '../db';
-import { requireAuth } from './auth';
-import { round2 } from '../engine';
+import { db } from '../db.js';
+import { requireAuth } from './auth.js';
+import { round2 } from '../engine.js';
 
 export const analyticsRouter = Router();
 

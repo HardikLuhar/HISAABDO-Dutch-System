@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import { db } from '../db';
-import { requireAuth } from './auth';
-import { createSessionToken } from '../auth';
-import { calculateGroupBalances, calculatePairwiseDebts, simplifyDebts } from '../engine';
-import { Group, GroupCategory, CurrencyCode, User, GroupMember } from '../types';
+import { db } from '../db.js';
+import { requireAuth } from './auth.js';
+import { createSessionToken } from '../auth.js';
+import { calculateGroupBalances, calculatePairwiseDebts, simplifyDebts } from '../engine.js';
+import { Group, GroupCategory, CurrencyCode, User, GroupMember } from '../types.js';
 
 export const groupsRouter = Router();
 

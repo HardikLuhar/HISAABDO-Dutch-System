@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { db } from '../db';
-import { hashPassword, verifyPassword, createSessionToken, getUserIdFromToken, revokeToken } from '../auth';
-import { CurrencyCode, User } from '../types';
+import { db } from '../db.js';
+import { hashPassword, verifyPassword, createSessionToken, getUserIdFromToken, revokeToken } from '../auth.js';
+import { CurrencyCode, User } from '../types.js';
 
 export const authRouter = Router();
 

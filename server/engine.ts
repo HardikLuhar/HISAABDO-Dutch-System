@@ -1,4 +1,4 @@
-import { Expense, Settlement, ExpenseSplit, ExpensePayer, SplitType, MemberBalance, PairwiseDebt, SimplifiedDebt, User } from './types';
+import { Expense, Settlement, ExpenseSplit, ExpensePayer, SplitType, MemberBalance, PairwiseDebt, SimplifiedDebt, User } from './types.js';
 
 export function round2(num: number): number {
   return Math.round((num + Number.EPSILON) * 100) / 100;

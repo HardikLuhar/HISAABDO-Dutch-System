@@ -1,5 +1,5 @@
-import { supabase } from './supabase';
-import { User, Group, GroupMember, Expense, Settlement, NotificationItem, ActivityItem } from './types';
+import { supabase } from './supabase.js';
+import { User, Group, GroupMember, Expense, Settlement, NotificationItem, ActivityItem } from './types.js';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 

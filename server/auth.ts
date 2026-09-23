@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { User } from './types';
+import { User } from './types.js';
 
 // ─── Session Secret ─────────────────────────────────────────────────────────
 // In serverless environments (Vercel), there's no persistent filesystem.

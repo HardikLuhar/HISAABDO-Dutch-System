@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import { db } from '../db';
-import { requireAuth } from './auth';
-import { calculateSplits, round2 } from '../engine';
-import { Expense, ExpensePayer, SplitType } from '../types';
+import { db } from '../db.js';
+import { requireAuth } from './auth.js';
+import { calculateSplits, round2 } from '../engine.js';
+import { Expense, ExpensePayer, SplitType } from '../types.js';
 
 export const expensesRouter = Router();
 

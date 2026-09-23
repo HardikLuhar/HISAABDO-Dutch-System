@@ -1,45 +1,13 @@
-import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import dotenv from 'dotenv';
-import { authRouter } from './server/routes/auth';
-import { groupsRouter } from './server/routes/groups';
-import { expensesRouter } from './server/routes/expenses';
-import { settlementsRouter } from './server/routes/settlements';
-import { analyticsRouter } from './server/routes/analytics';
-import { notificationsRouter, activityRouter } from './server/routes/notifications';
-import { ocrRouter } from './server/routes/ocr';
+import express from 'express';
+import { app } from './server/app';
 
 dotenv.config();
 
 async function startServer() {
-  const app = express();
   const PORT = 3000;
-
-  // Body parsers
-  app.use(express.json({ limit: '15mb' }));
-  app.use(express.urlencoded({ extended: true, limit: '15mb' }));
-
-  // Health check
-  app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
-  });
-
-  // Mount API routes
-  app.use('/api/auth', authRouter);
-  app.use('/api/groups', groupsRouter);
-  app.use('/api/groups', expensesRouter);
-  app.use('/api/groups', settlementsRouter);
-  app.use('/api/analytics', analyticsRouter);
-  app.use('/api/notifications', notificationsRouter);
-  app.use('/api/activities', activityRouter);
-  app.use('/api/receipt', ocrRouter);
-
-  // Global API error handler
-  app.use('/api', (err: any, req: any, res: any, next: any) => {
-    console.error('API Error:', err);
-    res.status(500).json({ error: err.message || 'Internal server error' });
-  });
 
   // Vite middleware for development / static serving for production
   if (process.env.NODE_ENV !== 'production') {

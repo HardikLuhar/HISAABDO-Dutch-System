@@ -1,0 +1,6 @@
+{
+  "name": "Hisaabdo",
+  "description": "Hisaabdo - Group Expense & Bill Splitting platform to manage group expenses, split bills fairly, and settle balances effortlessly.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

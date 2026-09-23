@@ -1,11 +1,11 @@
 import express from 'express';
-import { authRouter } from './routes/auth';
-import { groupsRouter } from './routes/groups';
-import { expensesRouter } from './routes/expenses';
-import { settlementsRouter } from './routes/settlements';
-import { analyticsRouter } from './routes/analytics';
-import { notificationsRouter, activityRouter } from './routes/notifications';
-import { ocrRouter } from './routes/ocr';
+import { authRouter } from './routes/auth.js';
+import { groupsRouter } from './routes/groups.js';
+import { expensesRouter } from './routes/expenses.js';
+import { settlementsRouter } from './routes/settlements.js';
+import { analyticsRouter } from './routes/analytics.js';
+import { notificationsRouter, activityRouter } from './routes/notifications.js';
+import { ocrRouter } from './routes/ocr.js';
 
 const app = express();
 

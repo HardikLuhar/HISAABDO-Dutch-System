@@ -43,3 +43,4 @@ app.use('/api', (err: any, req: any, res: any, next: any) => {
 });
 
 export { app };
+export default app;

@@ -92,7 +92,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               {/* Add Expense Primary CTA */}
               <button
                 onClick={onOpenAddExpense}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs sm:text-sm font-semibold shadow-sm shadow-emerald-600/30 transition cursor-pointer"
+                className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs sm:text-sm font-semibold shadow-sm shadow-emerald-600/30 transition cursor-pointer"
                 id="navbar-add-expense-btn"
               >
                 <Plus className="w-4 h-4" />

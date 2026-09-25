@@ -62,6 +62,8 @@ export const SettleUpModal: React.FC<SettleUpModalProps> = ({
     }
   }, [selectedGroupId, defaultPayerId, defaultReceiverId, defaultAmount, members.length]);
 
+  const isUserInvolved = !user?.id || payerId === user.id || receiverId === user.id;
+
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -75,6 +77,11 @@ export const SettleUpModal: React.FC<SettleUpModalProps> = ({
 
     if (payerId === receiverId) {
       showToast('Payer and receiver cannot be the same person', 'error');
+      return;
+    }
+
+    if (!isUserInvolved) {
+      showToast('Only the debt provider or debt taker can settle this debt', 'error');
       return;
     }
 
@@ -113,10 +120,10 @@ export const SettleUpModal: React.FC<SettleUpModalProps> = ({
   const receiver = members.find(m => m.userId === receiverId);
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in">
-      <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden my-8">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md shadow-2xl border border-slate-200 overflow-hidden max-h-[95vh] sm:max-h-[90vh] flex flex-col">
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50/70">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 bg-slate-50/70 flex-shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
               <CheckCircle2 className="w-4 h-4" />
@@ -155,7 +162,7 @@ export const SettleUpModal: React.FC<SettleUpModalProps> = ({
             </div>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto flex-1">
           {/* Group Selector */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">Group</label>
@@ -278,6 +285,12 @@ export const SettleUpModal: React.FC<SettleUpModalProps> = ({
                 className="w-full p-2 text-xs bg-white border border-slate-300 rounded-lg"
               />
             </div>
+
+            {!isUserInvolved && (
+              <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-center gap-2">
+                <span>⚠️ Only the debt provider or debt taker is permitted to record a settlement.</span>
+              </div>
+            )}
           </div>
 
           {/* Submit CTA */}
@@ -291,8 +304,8 @@ export const SettleUpModal: React.FC<SettleUpModalProps> = ({
             </button>
             <button
               type="submit"
-              disabled={isSubmitting}
-              className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-md shadow-emerald-600/30 transition disabled:opacity-50 cursor-pointer"
+              disabled={isSubmitting || !isUserInvolved}
+              className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-md shadow-emerald-600/30 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {isSubmitting ? 'Recording...' : 'Record Payment'}
             </button>

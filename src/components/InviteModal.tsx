@@ -127,10 +127,10 @@ export const InviteModal: React.FC<InviteModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in">
-      <div className="bg-white rounded-3xl max-w-xl w-full shadow-2xl border border-slate-200 overflow-hidden my-8">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
+      <div className="bg-white rounded-t-2xl sm:rounded-3xl w-full sm:max-w-xl shadow-2xl border border-slate-200 overflow-hidden max-h-[95vh] sm:max-h-[90vh] flex flex-col">
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50/80">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 bg-slate-50/80 flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center shadow-xs">
               <KeyRound className="w-5 h-5" />
@@ -153,7 +153,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-slate-200 bg-white px-6">
+        <div className="flex border-b border-slate-200 bg-white px-3 sm:px-6 overflow-x-auto scrollbar-hide flex-shrink-0">
           <button
             onClick={() => setActiveTab('members')}
             className={`py-3 px-3 text-xs font-bold border-b-2 transition flex items-center gap-2 cursor-pointer ${
@@ -162,8 +162,9 @@ export const InviteModal: React.FC<InviteModalProps> = ({
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
-            <KeyRound className="w-4 h-4" />
-            <span>Member Passwords & Links ({members.length})</span>
+            <KeyRound className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
+            <span className="hidden sm:inline">Member Passwords & Links ({members.length})</span>
+            <span className="sm:hidden">Passwords ({members.length})</span>
           </button>
 
           <button
@@ -192,7 +193,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({
         </div>
 
         {/* Modal Body */}
-        <div className="p-6">
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1">
           {/* TAB 1: MEMBER PASSWORDS & PERSONALIZED LINKS */}
           {activeTab === 'members' && (
             <div className="space-y-4">

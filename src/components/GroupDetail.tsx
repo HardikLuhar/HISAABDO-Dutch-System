@@ -235,52 +235,55 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
   const catMeta = GROUP_CATEGORIES.find(c => c.id === group.category) || { icon: '📁', label: group.category };
 
   return (
-    <div className="space-y-6 pb-20">
+    <div className="space-y-4 sm:space-y-6 pb-20">
       {/* Top Navigation & Breadcrumbs */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <button
           onClick={onBack}
-          className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-3 py-1.5 rounded-xl shadow-sm transition cursor-pointer"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-2.5 py-1.5 rounded-xl shadow-sm transition cursor-pointer"
           id="back-to-dashboard-btn"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Dashboard</span>
+          <span className="hidden sm:inline">Dashboard</span>
+          <span className="sm:hidden">Back</span>
         </button>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           <button
             onClick={() => handleOpenChangePassword()}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl transition cursor-pointer shadow-xs"
+            className="inline-flex items-center gap-1 text-[11px] sm:text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 px-2 sm:px-3 py-1.5 rounded-xl transition cursor-pointer shadow-xs"
             title="View or change your personal password for this group"
             id="my-group-password-btn"
           >
             <KeyRound className="w-3.5 h-3.5 text-amber-600" />
-            <span>My Password</span>
+            <span className="hidden sm:inline">My Password</span>
+            <span className="sm:hidden">Password</span>
           </button>
 
           <button
             onClick={handleCopyInvite}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-xl transition cursor-pointer"
+            className="inline-flex items-center gap-1 text-[11px] sm:text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 px-2 sm:px-3 py-1.5 rounded-xl transition cursor-pointer"
             title="Invite code"
             id="copy-invite-code-btn"
           >
             {copiedCode ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-            <span>Code: <span className="font-mono font-bold text-slate-900">{group.inviteCode}</span></span>
+            <span className="font-mono font-bold text-slate-900">{group.inviteCode}</span>
           </button>
 
           <button
             onClick={() => onOpenInvite(group.id)}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 px-3 py-1.5 rounded-xl transition cursor-pointer shadow-xs"
+            className="inline-flex items-center gap-1 text-[11px] sm:text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 px-2 sm:px-3 py-1.5 rounded-xl transition cursor-pointer shadow-xs"
             id="invite-members-btn"
           >
             <KeyRound className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Send Links & Passwords</span>
+            <span className="hidden sm:inline">Send Links & Passwords</span>
+            <span className="sm:hidden">Invite</span>
           </button>
         </div>
       </div>
 
       {/* Group Hero Header */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm">
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-6 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex items-start gap-4">
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-100 to-teal-100 border border-emerald-200 flex items-center justify-center text-3xl shadow-sm">
@@ -288,7 +291,7 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{group.name}</h1>
+                <h1 className="text-lg sm:text-2xl font-bold text-slate-900 tracking-tight">{group.name}</h1>
                 <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
                   {catMeta.label}
                 </span>
@@ -324,7 +327,7 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
         </div>
 
         {/* Quick Balance Status Ribbon */}
-        <div className="mt-6 pt-5 border-t border-slate-100 grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+        <div className="mt-4 sm:mt-6 pt-4 sm:pt-5 border-t border-slate-100 grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 text-xs">
           <div>
             <span className="text-slate-400 font-medium">Total Group Spending</span>
             <div className="text-base font-bold text-slate-900 mt-0.5">
@@ -363,75 +366,80 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
 
       {/* Tabs Navigation Bar */}
       <div className="border-b border-slate-200">
-        <nav className="flex space-x-2 sm:space-x-4 overflow-x-auto pb-1" aria-label="Tabs">
+        <nav className="flex space-x-1 sm:space-x-3 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide" aria-label="Tabs">
           <button
             onClick={() => setActiveTab('expenses')}
-            className={`py-2.5 px-3.5 border-b-2 font-semibold text-xs sm:text-sm whitespace-nowrap transition cursor-pointer flex items-center gap-2 ${
+            className={`py-2 sm:py-2.5 px-2.5 sm:px-3.5 border-b-2 font-semibold text-[11px] sm:text-sm whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 sm:gap-2 ${
               activeTab === 'expenses'
                 ? 'border-emerald-600 text-emerald-700'
                 : 'border-transparent text-slate-500 hover:text-slate-700'
             }`}
             id="tab-expenses-btn"
           >
-            <Receipt className="w-4 h-4" />
-            <span>Expenses ({expenses.length})</span>
+            <Receipt className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
+            <span className="hidden sm:inline">Expenses ({expenses.length})</span>
+            <span className="sm:hidden">Bills ({expenses.length})</span>
           </button>
 
           <button
             onClick={() => setActiveTab('balances')}
-            className={`py-2.5 px-3.5 border-b-2 font-semibold text-xs sm:text-sm whitespace-nowrap transition cursor-pointer flex items-center gap-2 ${
+            className={`py-2 sm:py-2.5 px-2.5 sm:px-3.5 border-b-2 font-semibold text-[11px] sm:text-sm whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 sm:gap-2 ${
               activeTab === 'balances'
                 ? 'border-emerald-600 text-emerald-700'
                 : 'border-transparent text-slate-500 hover:text-slate-700'
             }`}
             id="tab-balances-btn"
           >
-            <Scale className="w-4 h-4" />
-            <span>Balances & Debt Simplification</span>
+            <Scale className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
+            <span className="hidden sm:inline">Balances & Debt Simplification</span>
+            <span className="sm:hidden">Debts</span>
             {groupData.debtSimplification.transactionsSaved > 0 && (
               <span className="px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
-                -{groupData.debtSimplification.transactionsSaved} tx
+                -{groupData.debtSimplification.transactionsSaved}
               </span>
             )}
           </button>
 
           <button
             onClick={() => setActiveTab('analytics')}
-            className={`py-2.5 px-3.5 border-b-2 font-semibold text-xs sm:text-sm whitespace-nowrap transition cursor-pointer flex items-center gap-2 ${
+            className={`py-2 sm:py-2.5 px-2.5 sm:px-3.5 border-b-2 font-semibold text-[11px] sm:text-sm whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 sm:gap-2 ${
               activeTab === 'analytics'
                 ? 'border-emerald-600 text-emerald-700'
                 : 'border-transparent text-slate-500 hover:text-slate-700'
             }`}
             id="tab-analytics-btn"
           >
-            <PieIcon className="w-4 h-4" />
-            <span>Analytics & Charts</span>
+            <PieIcon className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
+            <span className="hidden sm:inline">Analytics & Charts</span>
+            <span className="sm:hidden">Charts</span>
           </button>
 
           <button
             onClick={() => setActiveTab('settlements')}
-            className={`py-2.5 px-3.5 border-b-2 font-semibold text-xs sm:text-sm whitespace-nowrap transition cursor-pointer flex items-center gap-2 ${
+            className={`py-2 sm:py-2.5 px-2.5 sm:px-3.5 border-b-2 font-semibold text-[11px] sm:text-sm whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 sm:gap-2 ${
               activeTab === 'settlements'
                 ? 'border-emerald-600 text-emerald-700'
                 : 'border-transparent text-slate-500 hover:text-slate-700'
             }`}
             id="tab-settlements-btn"
           >
-            <CheckCircle2 className="w-4 h-4" />
-            <span>Settlements ({settlements.length})</span>
+            <CheckCircle2 className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
+            <span className="hidden sm:inline">Settlements ({settlements.length})</span>
+            <span className="sm:hidden">Paid ({settlements.length})</span>
           </button>
 
           <button
             onClick={() => setActiveTab('members')}
-            className={`py-2.5 px-3.5 border-b-2 font-semibold text-xs sm:text-sm whitespace-nowrap transition cursor-pointer flex items-center gap-2 ${
+            className={`py-2 sm:py-2.5 px-2.5 sm:px-3.5 border-b-2 font-semibold text-[11px] sm:text-sm whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 sm:gap-2 ${
               activeTab === 'members'
                 ? 'border-emerald-600 text-emerald-700'
                 : 'border-transparent text-slate-500 hover:text-slate-700'
             }`}
             id="tab-members-btn"
           >
-            <Users className="w-4 h-4" />
-            <span>Members & Settings</span>
+            <Users className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
+            <span className="hidden sm:inline">Members & Settings</span>
+            <span className="sm:hidden">Members</span>
           </button>
         </nav>
       </div>
@@ -597,15 +605,15 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
       {activeTab === 'balances' && (
         <div className="space-y-6">
           {/* Smart Debt Simplification Banner (Section 9) */}
-          <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl p-6 shadow-lg relative overflow-hidden">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl p-4 sm:p-6 shadow-lg relative overflow-hidden">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
               <div>
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-semibold mb-2.5 border border-emerald-500/30">
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>Smart Debt Simplification Solver</span>
                 </div>
-                <h2 className="text-xl font-bold tracking-tight">Minimum Transaction Plan</h2>
-                <p className="text-xs text-slate-300 mt-1 max-w-lg">
+                <h2 className="text-base sm:text-xl font-bold tracking-tight">Minimum Transaction Plan</h2>
+                <p className="text-[11px] sm:text-xs text-slate-300 mt-1 max-w-lg">
                   Hisaabdo algorithm computes the global net cash flows to settle all balances in the fewest practical transfers.
                 </p>
               </div>
@@ -686,7 +694,7 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
                   return (
                     <div
                       key={idx}
-                      className={`p-4 rounded-2xl border transition shadow-sm ${
+                      className={`p-3 sm:p-4 rounded-2xl border transition shadow-sm ${
                         isUserPayer
                           ? 'bg-rose-50/60 border-rose-200'
                           : isUserReceiver
@@ -694,29 +702,29 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
                           : 'bg-white border-slate-200'
                       }`}
                     >
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
+                        <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-wrap sm:flex-nowrap">
                           <img
                             src={debt.fromAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${debt.fromName}`}
                             alt={debt.fromName}
-                            className="w-9 h-9 rounded-full object-cover border border-slate-200"
+                            className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover border border-slate-200"
                           />
                           <div className="text-xs">
-                            <span className="font-bold text-slate-900 block truncate max-w-[100px]">
+                            <span className="font-bold text-slate-900 block truncate max-w-[80px] sm:max-w-[100px]">
                               {debt.fromName} {isUserPayer && '(You)'}
                             </span>
                             <span className="text-[10px] text-slate-500">pays</span>
                           </div>
 
-                          <ArrowRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                          <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 flex-shrink-0" />
 
                           <img
                             src={debt.toAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${debt.toName}`}
                             alt={debt.toName}
-                            className="w-9 h-9 rounded-full object-cover border border-slate-200"
+                            className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover border border-slate-200"
                           />
                           <div className="text-xs">
-                            <span className="font-bold text-slate-900 block truncate max-w-[100px]">
+                            <span className="font-bold text-slate-900 block truncate max-w-[80px] sm:max-w-[100px]">
                               {debt.toName} {isUserReceiver && '(You)'}
                             </span>
                             <span className="text-[10px] text-slate-500">receives</span>
@@ -737,13 +745,19 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
                         </span>
 
                         <div className="flex items-center gap-2">
-                          {/* Settle Now CTA */}
-                          <button
-                            onClick={() => onOpenSettleUp(group.id, debt.fromUserId, debt.toUserId, debt.amount)}
-                            className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition cursor-pointer"
-                          >
-                            Settle Now
-                          </button>
+                          {/* Settle Now CTA — only visible to the payer or receiver of this debt */}
+                          {(isUserPayer || isUserReceiver) ? (
+                            <button
+                              onClick={() => onOpenSettleUp(group.id, debt.fromUserId, debt.toUserId, debt.amount)}
+                              className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition cursor-pointer"
+                            >
+                              Settle Now
+                            </button>
+                          ) : (
+                            <span className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-400 text-xs font-medium">
+                              Only involved members can settle
+                            </span>
+                          )}
 
                           {/* Send Reminder CTA (Requirement 17) */}
                           {isUserReceiver && (
@@ -1010,7 +1024,7 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
                 const memberBalance = groupData.balances.find(b => b.userId === m.userId);
 
                 return (
-                  <div key={m.userId} className="py-3.5 flex items-center justify-between gap-4">
+                  <div key={m.userId} className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
                     <div className="flex items-center gap-3">
                       <img
                         src={memberUser?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${memberUser?.name || m.userId}`}
@@ -1070,7 +1084,7 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3 sm:gap-4 pl-12 sm:pl-0">
                       <div className="text-right">
                         <div className="text-[10px] text-slate-400">Net balance</div>
                         <div className={`text-xs font-bold ${
@@ -1228,8 +1242,8 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
 
       {/* MODAL: Confirm Remove Member */}
       {memberToRemove && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in">
-          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-slate-200 p-6 space-y-4">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md shadow-2xl border border-slate-200 p-5 sm:p-6 space-y-4">
             <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto">
               <Users className="w-6 h-6" />
             </div>
@@ -1263,8 +1277,8 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
 
       {/* MODAL: Confirm Delete Group */}
       {showDeleteGroupConfirm && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in">
-          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-slate-200 p-6 space-y-4">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md shadow-2xl border border-slate-200 p-5 sm:p-6 space-y-4">
             <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto">
               <AlertTriangle className="w-6 h-6" />
             </div>

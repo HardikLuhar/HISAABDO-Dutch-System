@@ -58,6 +58,12 @@ settlementsRouter.post('/:groupId/settlements', requireAuth, async (req: any, re
       return res.status(400).json({ error: 'Payer and receiver cannot be the same person' });
     }
 
+    // Only the debt payer or receiver can record a settlement
+    const currentUserId = req.user?.id;
+    if (currentUserId !== payerId && currentUserId !== receiverId) {
+      return res.status(403).json({ error: 'Only the debt provider or debt taker can settle this debt' });
+    }
+
     const settleAmount = round2(Number(amount));
     if (isNaN(settleAmount) || settleAmount <= 0) {
       return res.status(400).json({ error: 'Amount must be greater than zero' });

@@ -414,15 +414,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   // Default: Render Home / Overview Dashboard
   return (
-    <div className="space-y-8 pb-16 transition-colors">
+    <div className="space-y-5 sm:space-y-8 pb-16 transition-colors">
       {/* Welcome Banner & Quick Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-950 p-6 sm:p-8 rounded-2xl text-white shadow-xl">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-950 p-4 sm:p-6 md:p-8 rounded-2xl text-white shadow-xl">
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-medium mb-3 border border-emerald-500/30">
             <Sparkles className="w-3.5 h-3.5" />
             <span>Smart Expense Engine Active</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">
             Welcome back, {user ? user.name : 'Guest'}
           </h1>
           <p className="text-slate-300 text-sm mt-1 max-w-xl">
@@ -459,9 +459,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
         {/* Total You are Owed */}
-        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md transition">
+        <div className="bg-white dark:bg-slate-900 p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md transition">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">You are owed</span>
             <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 flex items-center justify-center">
@@ -469,7 +469,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </div>
           </div>
           <div className="mt-3">
-            <span className="text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400" id="stat-owed">
+            <span className="text-xl sm:text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400" id="stat-owed">
               {formatCurrency(totalYouAreOwed, currency)}
             </span>
           </div>
@@ -477,7 +477,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
 
         {/* Total You Owe */}
-        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md transition">
+        <div className="bg-white dark:bg-slate-900 p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md transition">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">You owe</span>
             <div className="w-8 h-8 rounded-lg bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 flex items-center justify-center">
@@ -485,7 +485,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </div>
           </div>
           <div className="mt-3">
-            <span className="text-2xl font-bold tracking-tight text-rose-600 dark:text-rose-400" id="stat-owe">
+            <span className="text-xl sm:text-2xl font-bold tracking-tight text-rose-600 dark:text-rose-400" id="stat-owe">
               {formatCurrency(totalYouOwe, currency)}
             </span>
           </div>
@@ -493,7 +493,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
 
         {/* Net Balance */}
-        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md transition">
+        <div className="bg-white dark:bg-slate-900 p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md transition">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Net Balance</span>
             <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
@@ -505,7 +505,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </div>
           </div>
           <div className="mt-3">
-            <span className={`text-2xl font-bold tracking-tight ${
+            <span className={`text-xl sm:text-2xl font-bold tracking-tight ${
               netBalance > 0.01
                 ? 'text-emerald-600 dark:text-emerald-400'
                 : netBalance < -0.01
@@ -521,7 +521,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
 
         {/* Active Groups */}
-        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md transition">
+        <div className="bg-white dark:bg-slate-900 p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md transition">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Active Groups</span>
             <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 flex items-center justify-center">
@@ -529,7 +529,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white" id="stat-groups-count">
+            <span className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white" id="stat-groups-count">
               {groups.length}
             </span>
             <span className="text-xs text-slate-500 dark:text-slate-400">groups joined</span>
@@ -556,7 +556,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       </div>
 
       {/* Main Grid: Groups & Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-8">
         {/* Left Column (2 Cols): Groups List */}
         <div className="lg:col-span-2 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">

@@ -249,6 +249,16 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (expenseToEdit) {
+      const isCreator = Boolean(user?.id && expenseToEdit.createdBy === user.id);
+      const isHardik = Boolean((user?.name && user.name.trim().toLowerCase() === 'hardik') || (user?.email && user.email.toLowerCase().includes('hardik')));
+      const isGroupAdmin = currentGroup?.members.some(m => m.userId === user?.id && m.role === 'admin');
+      if (!isCreator && !isHardik && !isGroupAdmin) {
+        showToast('Only the member who added this expense (or admin) can edit it', 'error');
+        return;
+      }
+    }
+
     if (numAmount <= 0) {
       showToast('Please enter a valid expense amount greater than 0', 'error');
       return;

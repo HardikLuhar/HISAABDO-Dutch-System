@@ -243,6 +243,13 @@ function HisaabdoMain() {
   };
 
   const handleOpenEditExpense = (expense: ExpenseItem) => {
+    const isCreator = Boolean(user?.id && expense.createdBy === user.id);
+    const isHardik = Boolean((user?.name && user.name.trim().toLowerCase() === 'hardik') || (user?.email && user.email.toLowerCase().includes('hardik')));
+    const isGroupAdmin = groups.find(g => g.id === expense.groupId)?.members.some(m => m.userId === user?.id && m.role === 'admin');
+    if (!isCreator && !isHardik && !isGroupAdmin) {
+      showToast('Only the member who added this expense (or admin) can edit it', 'error');
+      return;
+    }
     setExpenseToEdit(expense);
     setAddExpenseGroupId(expense.groupId);
     setIsExpenseDetailOpen(false);

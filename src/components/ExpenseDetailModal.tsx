@@ -43,10 +43,12 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
 
   const catMeta = getCategoryMeta(expense.category);
   const isCreator = Boolean(user?.id && expense.createdBy === user.id);
+  const isHardik = Boolean((user?.name && user.name.trim().toLowerCase() === 'hardik') || (user?.email && user.email.toLowerCase().includes('hardik')));
+  const canManage = isCreator || isHardik;
 
   const handleDeleteExpense = async () => {
-    if (!isCreator) {
-      showToast('Only the member who added this expense entry can delete it', 'error');
+    if (!canManage) {
+      showToast('Only the member who added this expense (or admin) can delete it', 'error');
       return;
     }
 
@@ -78,17 +80,19 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
             </div>
           </div>
           <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => {
-                onOpenEditExpense(expense);
-                onClose();
-              }}
-              className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800 rounded-xl transition cursor-pointer"
-              title="Edit Expense"
-            >
-              <Edit2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-              <span>Edit</span>
-            </button>
+            {canManage && (
+              <button
+                onClick={() => {
+                  onOpenEditExpense(expense);
+                  onClose();
+                }}
+                className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800 rounded-xl transition cursor-pointer"
+                title="Edit Expense"
+              >
+                <Edit2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span>Edit</span>
+              </button>
+            )}
             <button
               onClick={onClose}
               className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-1.5 rounded-lg hover:bg-slate-200/60 dark:hover:bg-slate-800 transition cursor-pointer"
@@ -266,13 +270,17 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
             <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
               <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               <span className="font-medium">
-                {isCreator ? 'You created this entry and can delete it' : `Only ${expense.createdByName || 'creator'} can delete`}
+                {isCreator
+                  ? 'You created this entry and can edit or delete it'
+                  : isHardik
+                  ? 'Admin access: You can edit and delete this entry'
+                  : `Only ${expense.createdByName || 'creator'} can edit or delete`}
               </span>
             </div>
 
             <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-              {/* Delete Button (Creator Only) */}
-              {isCreator && !showDeleteConfirm && (
+              {/* Delete Button (Creator or Admin) */}
+              {canManage && !showDeleteConfirm && (
                 <button
                   type="button"
                   onClick={() => setShowDeleteConfirm(true)}
@@ -286,18 +294,20 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
                 </button>
               )}
 
-              <button
-                type="button"
-                onClick={() => {
-                  onOpenEditExpense(expense);
-                  onClose();
-                }}
-                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-xs transition cursor-pointer"
-                id="btn-modal-edit-expense"
-              >
-                <Edit2 className="w-3.5 h-3.5" />
-                <span>Edit</span>
-              </button>
+              {canManage && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onOpenEditExpense(expense);
+                    onClose();
+                  }}
+                  className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-xs transition cursor-pointer"
+                  id="btn-modal-edit-expense"
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                  <span>Edit</span>
+                </button>
+              )}
 
               <button
                 type="button"

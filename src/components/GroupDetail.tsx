@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { GroupCalculationData, ExpenseItem, SettlementItem, User } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
@@ -109,8 +109,10 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
 
   const handleConfirmDeleteExpense = async () => {
     if (!expenseToDelete) return;
-    if (expenseToDelete.createdBy !== user?.id) {
-      showToast('Only the member who added this expense entry can delete it', 'error');
+    const isCreator = expenseToDelete.createdBy === user?.id;
+    const isHardik = Boolean((user?.name && user.name.trim().toLowerCase() === 'hardik') || (user?.email && user.email.toLowerCase().includes('hardik')));
+    if (!isCreator && !isHardik && !isAdmin) {
+      showToast('Only the member who added this expense entry (or admin) can delete it', 'error');
       setExpenseToDelete(null);
       return;
     }
@@ -134,6 +136,27 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
   const group = groupData.group;
   const currency = group.defaultCurrency;
   const isAdmin = group.members.some(m => m.userId === user?.id && m.role === 'admin');
+
+  // Map of userId -> name for fast lookup
+  const userMap = useMemo(() => {
+    const map = new Map<string, string>();
+    allUsers?.forEach(u => map.set(u.id, u.name));
+    return map;
+  }, [allUsers]);
+
+  // Format participant names for expense row (e.g., "participant: A" or "participants: A, B, C")
+  const getParticipantText = (splits: ExpenseItem['splits']) => {
+    if (!splits || splits.length === 0) return '0 participants';
+    const names = splits.map(s => {
+      if (s.userName && s.userName !== 'Unknown') return s.userName;
+      const lookup = userMap.get(s.userId);
+      if (lookup) return lookup;
+      if (s.userId === user?.id) return user.name || 'You';
+      return 'Unknown';
+    });
+    const label = splits.length > 1 ? 'participants' : 'participant';
+    return `${label}: ${names.join(', ')}`;
+  };
 
   // Open password modal helper
   const handleOpenChangePassword = (targetUserId?: string, targetName?: string, targetPasscode?: string) => {
@@ -544,6 +567,12 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
                       const myPayment = exp.paidBy.find(p => p.userId === user?.id);
                       const primaryPayer = exp.paidBy[0];
                       const isCreator = user?.id === exp.createdBy;
+                      const isHardik = Boolean((user?.name && user.name.trim().toLowerCase() === 'hardik') || (user?.email && user.email.toLowerCase().includes('hardik')));
+                      const canManageExpense = isCreator || isHardik || isAdmin;
+                      const payerName = primaryPayer?.userName && primaryPayer.userName !== 'Unknown'
+                        ? primaryPayer.userName
+                        : (userMap.get(primaryPayer?.userId || '') || (primaryPayer?.userId === user?.id ? user?.name : 'Someone'));
+                      const participantText = getParticipantText(exp.splits);
 
                       return (
                         <div
@@ -564,10 +593,10 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
                                 <span className="font-medium text-slate-700 dark:text-slate-300">
                                   {exp.paidBy.length > 1
                                     ? `${exp.paidBy.length} people paid`
-                                    : `${primaryPayer?.userName || 'Someone'} paid`}
+                                    : `${payerName} paid`}
                                 </span>
                                 {' • '}
-                                <span>{exp.splits.length} participants</span>
+                                <span title={participantText}>{participantText}</span>
                                 {exp.receiptUrl && <span className="ml-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">📎 Receipt</span>}
                               </p>
                             </div>
@@ -596,7 +625,7 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
 
                             {/* Quick Actions */}
                             <div className="flex items-center gap-1">
-                              {isCreator && (
+                              {canManageExpense && (
                                 <button
                                   type="button"
                                   onClick={(e) => {
@@ -604,26 +633,28 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
                                     setExpenseToDelete(exp);
                                   }}
                                   className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition cursor-pointer"
-                                  title="Delete your entry"
+                                  title="Delete Expense"
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </button>
                               )}
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (onOpenEditExpense) {
-                                    onOpenEditExpense(exp);
-                                  } else {
-                                    onOpenExpenseDetail(exp);
-                                  }
-                                }}
-                                className="p-1.5 text-slate-400 hover:text-emerald-700 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-lg transition cursor-pointer"
-                                title="Edit Expense"
-                              >
-                                <Edit2 className="w-4 h-4" />
-                              </button>
+                              {canManageExpense && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (onOpenEditExpense) {
+                                      onOpenEditExpense(exp);
+                                    } else {
+                                      onOpenExpenseDetail(exp);
+                                    }
+                                  }}
+                                  className="p-1.5 text-slate-400 hover:text-emerald-700 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-lg transition cursor-pointer"
+                                  title="Edit Expense"
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                </button>
+                              )}
                             </div>
 
                             <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 group-hover:text-slate-500 transition hidden sm:block" />

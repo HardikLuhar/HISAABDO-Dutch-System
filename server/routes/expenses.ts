@@ -248,6 +248,16 @@ expensesRouter.put('/:groupId/expenses/:id', requireAuth, async (req: any, res) 
       return res.status(404).json({ error: 'Expense not found' });
     }
 
+    // Permission check: only the creator who added this expense or admin Hardik (or group admin) can edit
+    const isCreator = existing.createdBy === req.user.id;
+    const isHardik = Boolean((req.user.name && req.user.name.trim().toLowerCase() === 'hardik') || (req.user.email && req.user.email.toLowerCase().includes('hardik')));
+    const group = await db.getGroupById(groupId);
+    const isGroupAdmin = group?.members.some((m: any) => m.userId === req.user.id && m.role === 'admin');
+
+    if (!isCreator && !isHardik && !isGroupAdmin) {
+      return res.status(403).json({ error: 'Only the member who added this expense (or admin) can edit it' });
+    }
+
     const {
       description,
       amount,
@@ -331,9 +341,14 @@ expensesRouter.delete('/:groupId/expenses/:id', requireAuth, async (req: any, re
       return res.status(400).json({ error: 'Expense does not belong to this group' });
     }
 
-    // Check if the current user is the person who added this expense entry
-    if (existing.createdBy !== req.user.id) {
-      return res.status(403).json({ error: 'Only the member who added this expense entry can delete it' });
+    // Check if the current user is the person who added this expense entry or admin Hardik (or group admin)
+    const isCreator = existing.createdBy === req.user.id;
+    const isHardik = Boolean((req.user.name && req.user.name.trim().toLowerCase() === 'hardik') || (req.user.email && req.user.email.toLowerCase().includes('hardik')));
+    const group = await db.getGroupById(groupId);
+    const isGroupAdmin = group?.members.some((m: any) => m.userId === req.user.id && m.role === 'admin');
+
+    if (!isCreator && !isHardik && !isGroupAdmin) {
+      return res.status(403).json({ error: 'Only the member who added this expense (or admin) can delete it' });
     }
 
     const success = await db.deleteExpense(id);

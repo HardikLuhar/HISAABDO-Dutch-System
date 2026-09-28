@@ -174,18 +174,34 @@ groupsRouter.post('/:id/member-change-password', async (req, res) => {
 groupsRouter.get('/', requireAuth, async (req: any, res) => {
   try {
     const userId = req.user.id;
-    const groups = await db.getGroupsForUser(userId);
-    const usersMap = new Map<string, User>((await db.getUsers()).map(u => [u.id, u]));
+    // 1. Fetch user's groups and users list in parallel
+    const [groups, allUsers] = await Promise.all([
+      db.getGroupsForUser(userId),
+      db.getUsers()
+    ]);
 
-    const enrichedGroups = [];
-    for (const g of groups) {
-      const expenses = await db.getExpensesByGroup(g.id);
-      const settlements = await db.getSettlementsByGroup(g.id);
-      const { balances, netMap } = calculateGroupBalances(g.members, usersMap, expenses, settlements);
+    if (!groups || groups.length === 0) {
+      return res.json({ groups: [] });
+    }
+
+    const groupIds = groups.map(g => g.id);
+    const usersMap = new Map<string, User>(allUsers.map(u => [u.id, u]));
+
+    // 2. Batch fetch all expenses, settlements, and activities in parallel
+    const [expensesByGroup, settlementsByGroup, activitiesByGroup] = await Promise.all([
+      db.getExpensesByGroupIds(groupIds),
+      db.getSettlementsByGroupIds(groupIds),
+      db.getLatestActivitiesByGroupIds(groupIds)
+    ]);
+
+    // 3. Compute group balance summaries in memory instantly (<1ms)
+    const enrichedGroups = groups.map(g => {
+      const expenses = expensesByGroup.get(g.id) || [];
+      const settlements = settlementsByGroup.get(g.id) || [];
+      const { netMap } = calculateGroupBalances(g.members, usersMap, expenses, settlements);
 
       const userBalance = netMap.get(userId) || 0;
-      const activities = await db.getActivities(g.id, 1);
-      const lastActivity = activities.length > 0 ? activities[0].createdAt : g.createdAt;
+      const lastActivity = activitiesByGroup.get(g.id) || g.createdAt;
 
       // Enriched member details including passcode for the group members
       const membersSummary = g.members.map(m => {
@@ -200,7 +216,7 @@ groupsRouter.get('/', requireAuth, async (req: any, res) => {
         };
       });
 
-      enrichedGroups.push({
+      return {
         id: g.id,
         name: g.name,
         description: g.description,
@@ -213,8 +229,8 @@ groupsRouter.get('/', requireAuth, async (req: any, res) => {
         userBalance, // >0: user is owed, <0: user owes
         expensesCount: expenses.length,
         lastActivity
-      });
-    }
+      };
+    });
 
     return res.json({ groups: enrichedGroups });
   } catch (err: any) {

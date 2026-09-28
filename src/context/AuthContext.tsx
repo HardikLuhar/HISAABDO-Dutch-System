@@ -15,25 +15,52 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [user, setUser] = useState<User | null>(() => {
+    try {
+      const cached = localStorage.getItem('hisaabdo_cached_user');
+      return cached ? JSON.parse(cached) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [isLoading, setIsLoading] = useState<boolean>(() => {
+    const token = getStoredToken();
+    if (!token) return false;
+    const cached = localStorage.getItem('hisaabdo_cached_user');
+    return !cached;
+  });
+
+  const saveCachedUser = (u: User | null) => {
+    setUser(u);
+    try {
+      if (u) {
+        localStorage.setItem('hisaabdo_cached_user', JSON.stringify(u));
+        if (u.name) localStorage.setItem('hisaabdo_last_identifier', u.name);
+      } else {
+        localStorage.removeItem('hisaabdo_cached_user');
+      }
+    } catch {
+      // ignore
+    }
+  };
 
   const initAuth = async () => {
     const token = getStoredToken();
     if (!token) {
-      setUser(null);
+      saveCachedUser(null);
       setIsLoading(false);
       return;
     }
 
     try {
       const res = await api.getMe();
-      setUser(res.user);
-      if (res.user?.name) {
-        localStorage.setItem('hisaabdo_last_identifier', res.user.name);
-      }
+      saveCachedUser(res.user);
     } catch {
       localStorage.removeItem('splitwise_auth_token');
+      localStorage.removeItem('hisaabdo_cached_user');
+      localStorage.removeItem('hisaabdo_cached_groups');
+      localStorage.removeItem('hisaabdo_cached_activities');
       setUser(null);
     } finally {
       setIsLoading(false);
@@ -46,26 +73,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const quickStart = async (name: string, preferredCurrency: CurrencyCode = 'INR', password?: string, email?: string) => {
     const res = await api.quickStart(name, preferredCurrency, password, email);
-    setUser(res.user);
-    if (res.user?.name) {
-      localStorage.setItem('hisaabdo_last_identifier', res.user.name);
-    }
+    saveCachedUser(res.user);
   };
 
   const login = async (identifier: string, password: string) => {
     const res = await api.login(identifier, password);
-    setUser(res.user);
-    if (res.user?.name) {
-      localStorage.setItem('hisaabdo_last_identifier', res.user.name);
-    }
+    saveCachedUser(res.user);
   };
 
   const register = async (data: any) => {
     const res = await api.register(data);
-    setUser(res.user);
-    if (res.user?.name) {
-      localStorage.setItem('hisaabdo_last_identifier', res.user.name);
-    }
+    saveCachedUser(res.user);
   };
 
   const logout = async () => {
@@ -75,12 +93,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // ignore
     }
     localStorage.removeItem('splitwise_auth_token');
+    localStorage.removeItem('hisaabdo_cached_user');
+    localStorage.removeItem('hisaabdo_cached_groups');
+    localStorage.removeItem('hisaabdo_cached_activities');
+    localStorage.removeItem('hisaabdo_cached_users');
     setUser(null);
   };
 
   const updateProfile = async (updates: Partial<User>) => {
     const res = await api.updateProfile(updates);
-    setUser(res.user);
+    saveCachedUser(res.user);
   };
 
   return (

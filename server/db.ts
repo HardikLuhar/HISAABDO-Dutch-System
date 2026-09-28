@@ -111,15 +111,27 @@ function rowToGroupMember(row: any): GroupMember {
 // ─── Database Class ─────────────────────────────────────────────────────────
 
 class Database {
+  private usersCache: { data: User[]; timestamp: number } | null = null;
+  private readonly USERS_CACHE_TTL = 30000; // 30 seconds
+
+  public invalidateUsersCache(): void {
+    this.usersCache = null;
+  }
 
   // ─── User Operations ────────────────────────────────────────────────────
 
-  async getUsers(): Promise<User[]> {
+  async getUsers(forceFresh = false): Promise<User[]> {
+    const now = Date.now();
+    if (!forceFresh && this.usersCache && (now - this.usersCache.timestamp < this.USERS_CACHE_TTL)) {
+      return this.usersCache.data;
+    }
     const { data, error } = await supabase
       .from('users')
       .select('*');
-    if (error) { console.error('getUsers error:', error); return []; }
-    return (data || []).map(rowToUser);
+    if (error) { console.error('getUsers error:', error); return this.usersCache?.data || []; }
+    const users = (data || []).map(rowToUser);
+    this.usersCache = { data: users, timestamp: now };
+    return users;
   }
 
   async getUserById(id: string): Promise<User | undefined> {
@@ -194,6 +206,7 @@ class Database {
   }
 
   async createUser(user: User): Promise<User> {
+    this.invalidateUsersCache();
     const { error } = await supabase
       .from('users')
       .insert({
@@ -212,6 +225,7 @@ class Database {
   }
 
   async updateUser(id: string, updates: Partial<User>): Promise<User | null> {
+    this.invalidateUsersCache();
     const dbUpdates: any = {};
     if (updates.name !== undefined) dbUpdates.name = updates.name;
     if (updates.email !== undefined) dbUpdates.email = updates.email;
@@ -255,107 +269,160 @@ class Database {
 
   async getGroups(): Promise<Group[]> {
     const { data, error } = await supabase.from('groups').select('*');
-    if (error || !data) return [];
-    const groups: Group[] = [];
-    for (const row of data) {
-      groups.push(await this.assembleGroup(row));
+    if (error || !data || data.length === 0) return [];
+
+    const groupIds = data.map(r => r.id);
+    const { data: memberRows } = await supabase
+      .from('group_members')
+      .select('*')
+      .in('group_id', groupIds);
+
+    const membersByGroup = new Map<string, GroupMember[]>();
+    for (const mRow of (memberRows || [])) {
+      if (!membersByGroup.has(mRow.group_id)) {
+        membersByGroup.set(mRow.group_id, []);
+      }
+      membersByGroup.get(mRow.group_id)!.push(rowToGroupMember(mRow));
     }
-    return groups;
+
+    return data.map(groupRow => ({
+      id: groupRow.id,
+      name: groupRow.name,
+      description: groupRow.description ?? '',
+      category: groupRow.category ?? 'Trip',
+      defaultCurrency: groupRow.default_currency ?? 'INR',
+      createdBy: groupRow.created_by,
+      createdAt: groupRow.created_at,
+      inviteCode: groupRow.invite_code,
+      members: membersByGroup.get(groupRow.id) || [],
+    }));
   }
 
   async getGroupsForUser(userId: string): Promise<Group[]> {
-    const user = await this.getUserById(userId);
+    // 1. In parallel: query user's group memberships and groups created by the user
+    const [membershipRes, createdRes] = await Promise.all([
+      supabase.from('group_members').select('group_id').eq('user_id', userId),
+      supabase.from('groups').select('id').eq('created_by', userId)
+    ]);
 
-    // Get all group_ids where user is a member
-    const { data: membershipRows } = await supabase
-      .from('group_members')
-      .select('group_id')
-      .eq('user_id', userId);
+    const memberGroupIds = new Set((membershipRes.data || []).map(r => r.group_id));
+    const createdGroupIds = (createdRes.data || []).map(r => r.id);
 
-    const memberGroupIds = new Set((membershipRows || []).map(r => r.group_id));
-
-    // Also get groups the user created (self-healing)
-    const { data: createdRows } = await supabase
-      .from('groups')
-      .select('id')
-      .eq('created_by', userId);
-
-    const createdGroupIds = (createdRows || []).map(r => r.id);
-
-    // Merge and deduplicate
+    // Self-healing: if creator isn't recorded in group_members, add them
+    const missingCreatorMemberships: string[] = [];
     for (const gid of createdGroupIds) {
       if (!memberGroupIds.has(gid)) {
-        // Self-healing: creator should be a member
-        await supabase.from('group_members').upsert({
-          group_id: gid,
-          user_id: userId,
-          role: 'admin',
-          joined_at: new Date().toISOString(),
-        }, { onConflict: 'group_id,user_id' });
+        missingCreatorMemberships.push(gid);
         memberGroupIds.add(gid);
       }
     }
 
+    if (missingCreatorMemberships.length > 0) {
+      await supabase.from('group_members').upsert(
+        missingCreatorMemberships.map(gid => ({
+          group_id: gid,
+          user_id: userId,
+          role: 'admin',
+          joined_at: new Date().toISOString(),
+        })),
+        { onConflict: 'group_id,user_id' }
+      );
+    }
+
     if (memberGroupIds.size === 0) return [];
 
-    // Fetch all groups
-    const { data: groupRows } = await supabase
-      .from('groups')
-      .select('*')
-      .in('id', Array.from(memberGroupIds));
+    const groupIdsArray = Array.from(memberGroupIds);
 
-    if (!groupRows) return [];
+    // 2. Fetch all groups and all their members in parallel batch queries
+    const [groupRowsRes, memberRowsRes] = await Promise.all([
+      supabase.from('groups').select('*').in('id', groupIdsArray),
+      supabase.from('group_members').select('*').in('group_id', groupIdsArray)
+    ]);
 
-    const groups: Group[] = [];
-    for (const row of groupRows) {
-      groups.push(await this.assembleGroup(row));
+    if (!groupRowsRes.data) return [];
+
+    const membersByGroup = new Map<string, GroupMember[]>();
+    for (const mRow of (memberRowsRes.data || [])) {
+      if (!membersByGroup.has(mRow.group_id)) {
+        membersByGroup.set(mRow.group_id, []);
+      }
+      membersByGroup.get(mRow.group_id)!.push(rowToGroupMember(mRow));
     }
 
-    // Self-healing: match by email/name for re-registered users
-    if (user) {
-      const userEmail = (user.email || '').toLowerCase().trim();
-      const userName = (user.name || '').toLowerCase().trim();
+    return groupRowsRes.data.map(row => ({
+      id: row.id,
+      name: row.name,
+      description: row.description ?? '',
+      category: row.category ?? 'Trip',
+      defaultCurrency: row.default_currency ?? 'INR',
+      createdBy: row.created_by,
+      createdAt: row.created_at,
+      inviteCode: row.invite_code,
+      members: membersByGroup.get(row.id) || [],
+    }));
+  }
 
-      // Get ALL group_members where userId matches a user with same email/name
-      const allUsers = await this.getUsers();
-      const matchingUserIds = allUsers
-        .filter(u => u.id !== userId && (
-          (userEmail && (u.email || '').toLowerCase() === userEmail) ||
-          (userName && (u.name || '').toLowerCase() === userName)
-        ))
-        .map(u => u.id);
+  // ─── Batch Operations for Instant Dashboard Load ─────────────────────────
 
-      if (matchingUserIds.length > 0) {
-        const { data: extraMemberships } = await supabase
-          .from('group_members')
-          .select('group_id')
-          .in('user_id', matchingUserIds);
+  async getExpensesByGroupIds(groupIds: string[]): Promise<Map<string, Expense[]>> {
+    const map = new Map<string, Expense[]>();
+    groupIds.forEach(id => map.set(id, []));
+    if (groupIds.length === 0) return map;
 
-        for (const row of (extraMemberships || [])) {
-          if (!memberGroupIds.has(row.group_id)) {
-            // Update the member entry to point to the current userId
-            await supabase
-              .from('group_members')
-              .update({ user_id: userId })
-              .eq('group_id', row.group_id)
-              .in('user_id', matchingUserIds);
+    const { data, error } = await supabase
+      .from('expenses')
+      .select('*')
+      .in('group_id', groupIds)
+      .order('date', { ascending: false });
 
-            memberGroupIds.add(row.group_id);
-            // Fetch and add this group
-            const { data: gRow } = await supabase
-              .from('groups')
-              .select('*')
-              .eq('id', row.group_id)
-              .maybeSingle();
-            if (gRow) {
-              groups.push(await this.assembleGroup(gRow));
-            }
-          }
-        }
+    if (error || !data) return map;
+    for (const row of data) {
+      const exp = rowToExpense(row);
+      const list = map.get(exp.groupId);
+      if (list) list.push(exp);
+      else map.set(exp.groupId, [exp]);
+    }
+    return map;
+  }
+
+  async getSettlementsByGroupIds(groupIds: string[]): Promise<Map<string, Settlement[]>> {
+    const map = new Map<string, Settlement[]>();
+    groupIds.forEach(id => map.set(id, []));
+    if (groupIds.length === 0) return map;
+
+    const { data, error } = await supabase
+      .from('settlements')
+      .select('*')
+      .in('group_id', groupIds)
+      .order('date', { ascending: false });
+
+    if (error || !data) return map;
+    for (const row of data) {
+      const sett = rowToSettlement(row);
+      const list = map.get(sett.groupId);
+      if (list) list.push(sett);
+      else map.set(sett.groupId, [sett]);
+    }
+    return map;
+  }
+
+  async getLatestActivitiesByGroupIds(groupIds: string[]): Promise<Map<string, string>> {
+    const map = new Map<string, string>();
+    if (groupIds.length === 0) return map;
+
+    const { data, error } = await supabase
+      .from('activities')
+      .select('group_id, created_at')
+      .in('group_id', groupIds)
+      .order('created_at', { ascending: false });
+
+    if (error || !data) return map;
+    for (const row of data) {
+      if (row.group_id && !map.has(row.group_id)) {
+        map.set(row.group_id, row.created_at);
       }
     }
-
-    return groups;
+    return map;
   }
 
   async getGroupById(id: string): Promise<Group | undefined> {

@@ -26,11 +26,38 @@ function HisaabdoMain() {
   const { user, isLoading: authLoading } = useAuth();
   const { showToast } = useNotification();
 
-  // Primary data state
-  const [groups, setGroups] = useState<GroupItem[]>([]);
-  const [activities, setActivities] = useState<ActivityItem[]>([]);
-  const [allUsers, setAllUsers] = useState<User[]>([]);
-  const [isLoadingData, setIsLoadingData] = useState(true);
+  // Primary data state (Cache-first for instant 0ms initial load)
+  const [groups, setGroups] = useState<GroupItem[]>(() => {
+    try {
+      const cached = localStorage.getItem('hisaabdo_cached_groups');
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [activities, setActivities] = useState<ActivityItem[]>(() => {
+    try {
+      const cached = localStorage.getItem('hisaabdo_cached_activities');
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [allUsers, setAllUsers] = useState<User[]>(() => {
+    try {
+      const cached = localStorage.getItem('hisaabdo_cached_users');
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [isLoadingData, setIsLoadingData] = useState(() => {
+    try {
+      return !localStorage.getItem('hisaabdo_cached_groups');
+    } catch {
+      return true;
+    }
+  });
 
   // Group Detail View state
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
@@ -81,17 +108,31 @@ function HisaabdoMain() {
   const [portalPasscode, setPortalPasscode] = useState<string | undefined>();
   const [portalAutoExpense, setPortalAutoExpense] = useState(true);
 
-  // Load all initial data
+  // Load all initial data (Stale-While-Revalidate)
   const loadDashboardData = useCallback(async () => {
     try {
-      const [groupsData, actsData, usersData] = await Promise.all([
+      const [groupsData, actsData] = await Promise.all([
         api.getGroups(),
-        api.getActivities(undefined, 20),
-        api.getUsers()
+        api.getActivities(undefined, 20)
       ]);
       setGroups(groupsData);
       setActivities(actsData);
-      setAllUsers(usersData.users);
+      try {
+        localStorage.setItem('hisaabdo_cached_groups', JSON.stringify(groupsData));
+        localStorage.setItem('hisaabdo_cached_activities', JSON.stringify(actsData));
+      } catch {
+        // ignore
+      }
+
+      // Fetch users in background without blocking dashboard render
+      api.getUsers().then(usersData => {
+        setAllUsers(usersData.users);
+        try {
+          localStorage.setItem('hisaabdo_cached_users', JSON.stringify(usersData.users));
+        } catch {
+          // ignore
+        }
+      }).catch(err => console.warn('Background users fetch warning:', err));
     } catch (err: any) {
       console.error('Failed to load dashboard data:', err);
     } finally {
@@ -302,7 +343,7 @@ function HisaabdoMain() {
     }
   };
 
-  if (authLoading) {
+  if (authLoading && !user) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-4 transition-colors">
         <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-lg shadow-emerald-600/30 animate-bounce mb-4">

@@ -128,38 +128,38 @@ export const InviteModal: React.FC<InviteModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
-      <div className="bg-white rounded-t-2xl sm:rounded-3xl w-full sm:max-w-xl shadow-2xl border border-slate-200 overflow-hidden max-h-[95vh] sm:max-h-[90vh] flex flex-col">
+      <div className="bg-white dark:bg-slate-900 rounded-t-2xl sm:rounded-3xl w-full sm:max-w-xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden max-h-[95vh] sm:max-h-[90vh] flex flex-col transition-colors">
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 bg-slate-50/80 flex-shrink-0">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/50 flex-shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center shadow-xs">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 flex items-center justify-center shadow-xs">
               <KeyRound className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="font-bold text-slate-900 text-base">
+              <h2 className="font-bold text-slate-900 dark:text-white text-base">
                 Send Group Links & Passwords
               </h2>
-              <p className="text-[11px] text-slate-500">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
                 {groupName} • Each member has their own unique password to add expenses
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-200/60 transition cursor-pointer"
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-1.5 rounded-lg hover:bg-slate-200/60 dark:hover:bg-slate-800 transition cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-slate-200 bg-white px-3 sm:px-6 overflow-x-auto scrollbar-hide flex-shrink-0">
+        <div className="flex border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 sm:px-6 overflow-x-auto scrollbar-hide flex-shrink-0">
           <button
             onClick={() => setActiveTab('members')}
             className={`py-3 px-3 text-xs font-bold border-b-2 transition flex items-center gap-2 cursor-pointer ${
               activeTab === 'members'
-                ? 'border-emerald-600 text-emerald-700'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+                ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400'
+                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
             }`}
           >
             <KeyRound className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
@@ -171,8 +171,8 @@ export const InviteModal: React.FC<InviteModalProps> = ({
             onClick={() => setActiveTab('add')}
             className={`py-3 px-3 text-xs font-bold border-b-2 transition flex items-center gap-2 cursor-pointer ${
               activeTab === 'add'
-                ? 'border-emerald-600 text-emerald-700'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+                ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400'
+                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
             }`}
           >
             <UserPlus className="w-4 h-4" />
@@ -183,8 +183,8 @@ export const InviteModal: React.FC<InviteModalProps> = ({
             onClick={() => setActiveTab('general')}
             className={`py-3 px-3 text-xs font-bold border-b-2 transition flex items-center gap-2 cursor-pointer ${
               activeTab === 'general'
-                ? 'border-emerald-600 text-emerald-700'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+                ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400'
+                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
             }`}
           >
             <Share2 className="w-4 h-4" />
@@ -197,11 +197,11 @@ export const InviteModal: React.FC<InviteModalProps> = ({
           {/* TAB 1: MEMBER PASSWORDS & PERSONALIZED LINKS */}
           {activeTab === 'members' && (
             <div className="space-y-4">
-              <div className="bg-emerald-50/80 border border-emerald-200 rounded-2xl p-3 text-xs text-emerald-900 flex items-start gap-2.5">
-                <Sparkles className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+              <div className="bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-2xl p-3 text-xs text-emerald-900 dark:text-emerald-200 flex items-start gap-2.5">
+                <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
                 <div>
                   <span className="font-bold">How it works:</span>
-                  <p className="text-[11px] text-emerald-800 mt-0.5 leading-relaxed">
+                  <p className="text-[11px] text-emerald-800 dark:text-emerald-300 mt-0.5 leading-relaxed">
                     Send each friend their unique link and password. When they open the link, they enter their password and are immediately ready to add expenses!
                   </p>
                 </div>
@@ -229,9 +229,9 @@ export const InviteModal: React.FC<InviteModalProps> = ({
                           />
                           <div>
                             <div className="flex items-center gap-2">
-                              <span className="font-bold text-slate-900 text-xs">{m.name}</span>
+                              <span className="font-bold text-slate-900 dark:text-white text-xs">{m.name}</span>
                               {m.role === 'admin' && (
-                                <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-100 text-amber-800">
+                                <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300">
                                   Admin
                                 </span>
                               )}
@@ -246,27 +246,27 @@ export const InviteModal: React.FC<InviteModalProps> = ({
                                     value={editingPasscode}
                                     onChange={(e) => setEditingPasscode(e.target.value)}
                                     placeholder="e.g. 4829"
-                                    className="w-20 px-2 py-0.5 text-xs font-mono font-bold bg-white border border-emerald-400 rounded-md focus:outline-none"
+                                    className="w-20 px-2 py-0.5 text-xs font-mono font-bold bg-white dark:bg-slate-800 border border-emerald-400 rounded-md text-slate-900 dark:text-white focus:outline-none"
                                     autoFocus
                                   />
                                   <button
                                     onClick={() => handleSavePasscode(m.userId)}
                                     disabled={isSavingPasscode}
-                                    className="text-[10px] font-bold text-emerald-700 bg-emerald-100 hover:bg-emerald-200 px-2 py-0.5 rounded cursor-pointer"
+                                    className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/60 hover:bg-emerald-200 px-2 py-0.5 rounded cursor-pointer"
                                   >
                                     Save
                                   </button>
                                   <button
                                     onClick={() => setEditingUserId(null)}
-                                    className="text-[10px] text-slate-400 hover:text-slate-600 px-1 cursor-pointer"
+                                    className="text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 px-1 cursor-pointer"
                                   >
                                     ✕
                                   </button>
                                 </div>
                               ) : (
                                 <div className="flex items-center gap-1.5">
-                                  <span className="text-[10px] font-semibold text-slate-400">Password:</span>
-                                  <span className="px-2 py-0.5 bg-slate-100 text-slate-900 font-mono font-black text-xs rounded-md border border-slate-200 tracking-wider">
+                                  <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500">Password:</span>
+                                  <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-mono font-black text-xs rounded-md border border-slate-200 dark:border-slate-700 tracking-wider">
                                     {passcode}
                                   </span>
                                   <button
@@ -274,7 +274,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({
                                       setEditingUserId(m.userId);
                                       setEditingPasscode(passcode);
                                     }}
-                                    className="text-slate-400 hover:text-slate-600 p-0.5 rounded cursor-pointer"
+                                    className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 rounded cursor-pointer"
                                     title="Edit Password"
                                   >
                                     <Edit2 className="w-3 h-3" />
@@ -336,7 +336,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({
           {activeTab === 'add' && (
             <div className="space-y-4">
               <form onSubmit={handleAddMember} className="space-y-3">
-                <label className="block text-xs font-bold text-slate-900">
+                <label className="block text-xs font-bold text-slate-900 dark:text-white">
                   Friend's Name
                 </label>
                 <div className="flex gap-2">
@@ -348,7 +348,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({
                       value={identifier}
                       onChange={(e) => setIdentifier(e.target.value)}
                       autoFocus
-                      className="w-full pl-9 pr-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20"
+                      className="w-full pl-9 pr-3 py-2 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-emerald-500/20"
                     />
                   </div>
                   <button
@@ -363,23 +363,23 @@ export const InviteModal: React.FC<InviteModalProps> = ({
 
               {/* Just added member preview card */}
               {justAddedMember && (
-                <div className="bg-emerald-50/80 border border-emerald-300 rounded-2xl p-4 space-y-3 animate-in fade-in">
+                <div className="bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-300 dark:border-emerald-800 rounded-2xl p-4 space-y-3 animate-in fade-in">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                      <span className="text-xs font-bold text-emerald-950">
+                      <span className="text-xs font-bold text-emerald-950 dark:text-emerald-200">
                         {justAddedMember.name} was added!
                       </span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] text-emerald-700 font-medium">Their Password:</span>
-                      <span className="px-2 py-0.5 bg-white text-emerald-950 font-mono font-extrabold text-xs rounded-md border border-emerald-300">
+                      <span className="text-[10px] text-emerald-700 dark:text-emerald-300 font-medium">Their Password:</span>
+                      <span className="px-2 py-0.5 bg-white dark:bg-slate-800 text-emerald-950 dark:text-emerald-200 font-mono font-extrabold text-xs rounded-md border border-emerald-300 dark:border-emerald-700">
                         {justAddedMember.passcode}
                       </span>
                     </div>
                   </div>
 
-                  <p className="text-[11px] text-emerald-800">
+                  <p className="text-[11px] text-emerald-800 dark:text-emerald-300">
                     Send them their link and password so they can log in and add their expenses:
                   </p>
 
@@ -398,7 +398,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({
                         'just-added',
                         `Invitation for ${justAddedMember.name}`
                       )}
-                      className="py-2 px-3 bg-white hover:bg-emerald-100 text-emerald-900 border border-emerald-300 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer"
+                      className="py-2 px-3 bg-white dark:bg-slate-800 hover:bg-emerald-100 dark:hover:bg-slate-700 text-emerald-900 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer"
                     >
                       {copiedKey === 'just-added' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                       <span>{copiedKey === 'just-added' ? 'Copied' : 'Copy Message'}</span>
@@ -413,14 +413,14 @@ export const InviteModal: React.FC<InviteModalProps> = ({
           {activeTab === 'general' && (
             <div className="space-y-4">
               <div>
-                <span className="block text-xs font-bold text-slate-900 mb-1">Group Invite Code</span>
-                <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
-                  <span className="font-mono text-sm font-extrabold text-slate-900 tracking-wider">
+                <span className="block text-xs font-bold text-slate-900 dark:text-white mb-1">Group Invite Code</span>
+                <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl">
+                  <span className="font-mono text-sm font-extrabold text-slate-900 dark:text-white tracking-wider">
                     {inviteCode}
                   </span>
                   <button
                     onClick={() => handleCopyText(inviteCode, 'general-code', 'Invite code')}
-                    className="flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg border border-emerald-200 transition cursor-pointer"
+                    className="flex items-center gap-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300 hover:text-emerald-800 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 px-3 py-1.5 rounded-lg border border-emerald-200 dark:border-emerald-800 transition cursor-pointer"
                   >
                     {copiedKey === 'general-code' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                     <span>{copiedKey === 'general-code' ? 'Copied' : 'Copy Code'}</span>
@@ -429,31 +429,31 @@ export const InviteModal: React.FC<InviteModalProps> = ({
               </div>
 
               <div>
-                <span className="block text-xs font-bold text-slate-900 mb-1">General Group Link</span>
-                <div className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600">
-                  <span className="truncate max-w-[280px] text-slate-500 font-mono text-[11px]">
+                <span className="block text-xs font-bold text-slate-900 dark:text-white mb-1">General Group Link</span>
+                <div className="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-600 dark:text-slate-300">
+                  <span className="truncate max-w-[280px] text-slate-500 dark:text-slate-400 font-mono text-[11px]">
                     {currentOrigin}/?group={groupId}
                   </span>
                   <button
                     onClick={() => handleCopyText(`${currentOrigin}/?group=${groupId}`, 'general-link', 'Group link')}
-                    className="flex items-center gap-1 text-xs font-semibold text-slate-700 hover:text-slate-900 bg-white px-2.5 py-1 rounded-lg border border-slate-300 transition cursor-pointer"
+                    className="flex items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-slate-900 bg-white dark:bg-slate-700 px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-600 transition cursor-pointer"
                   >
                     {copiedKey === 'general-link' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Share2 className="w-3.5 h-3.5" />}
                     <span>{copiedKey === 'general-link' ? 'Copied' : 'Copy Link'}</span>
                   </button>
                 </div>
-                <p className="text-[11px] text-slate-400 mt-1">
+                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
                   When members open this general link, they pick their name and enter their unique password to access the group.
                 </p>
               </div>
             </div>
           )}
 
-          <div className="pt-4 border-t border-slate-100 flex justify-end">
+          <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end">
             <button
               type="button"
               onClick={onClose}
-              className="px-5 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition cursor-pointer"
+              className="px-5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition cursor-pointer"
             >
               Done
             </button>

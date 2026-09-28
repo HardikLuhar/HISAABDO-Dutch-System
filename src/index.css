@@ -8,6 +8,41 @@
     -moz-osx-font-smoothing: grayscale;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
+
+  /* Force readable text colors in Dark Mode for all form controls */
+  .dark input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not([type="reset"]),
+  .dark select,
+  .dark textarea {
+    color: #f8fafc !important;
+  }
+
+  .dark input::placeholder,
+  .dark textarea::placeholder {
+    color: #94a3b8 !important;
+  }
+
+  /* Automatically adapt white / light inputs to slate-800 in dark mode */
+  .dark input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not([type="reset"]).bg-white,
+  .dark input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not([type="reset"]).bg-slate-50,
+  .dark select.bg-white,
+  .dark select.bg-slate-50,
+  .dark textarea.bg-white,
+  .dark textarea.bg-slate-50 {
+    background-color: #1e293b;
+    border-color: #334155;
+    color: #f8fafc !important;
+  }
+
+  /* Ensure dropdown options in dark mode are dark with crisp white text */
+  .dark select option {
+    background-color: #0f172a;
+    color: #f8fafc;
+  }
+
+  /* Invert date picker calendar icon in WebKit browsers for dark mode */
+  .dark input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.9) brightness(1.2);
+  }
 }
 
 @layer utilities {

@@ -1,5 +1,5 @@
 import { supabase } from './supabase.js';
-import { User, Group, GroupMember, Expense, Settlement, NotificationItem, ActivityItem } from './types.js';
+import { User, Group, GroupMember, Expense, Settlement, NotificationItem, ActivityItem, UserSecurityQuestion } from './types.js';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -13,7 +13,20 @@ function rowToUser(row: any): User {
     avatarUrl: row.avatar_url ?? '',
     phone: row.phone ?? undefined,
     preferredCurrency: row.preferred_currency ?? 'INR',
+    securityQuestionsSet: row.security_questions_set ?? false,
     createdAt: row.created_at,
+  };
+}
+
+/** Convert snake_case DB row to camelCase UserSecurityQuestion */
+function rowToSecurityQuestion(row: any): UserSecurityQuestion {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    questionId: row.question_id,
+    answerHash: row.answer_hash,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
   };
 }
 
@@ -191,6 +204,7 @@ class Database {
         avatar_url: user.avatarUrl || '',
         phone: user.phone || null,
         preferred_currency: user.preferredCurrency || 'INR',
+        security_questions_set: user.securityQuestionsSet || false,
         created_at: user.createdAt || new Date().toISOString(),
       });
     if (error) console.error('createUser error:', error);
@@ -205,6 +219,7 @@ class Database {
     if (updates.avatarUrl !== undefined) dbUpdates.avatar_url = updates.avatarUrl;
     if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
     if (updates.preferredCurrency !== undefined) dbUpdates.preferred_currency = updates.preferredCurrency;
+    if (updates.securityQuestionsSet !== undefined) dbUpdates.security_questions_set = updates.securityQuestionsSet;
 
     const { data, error } = await supabase
       .from('users')
@@ -789,9 +804,57 @@ class Database {
     return act;
   }
 
+  // ─── Security Questions Operations ────────────────────────────────────────
+
+  async getSecurityQuestions(userId: string): Promise<UserSecurityQuestion[]> {
+    const { data, error } = await supabase
+      .from('user_security_questions')
+      .select('*')
+      .eq('user_id', userId);
+    if (error) { console.error('getSecurityQuestions error:', error); return []; }
+    return (data || []).map(rowToSecurityQuestion);
+  }
+
+  async saveSecurityQuestions(userId: string, questions: { questionId: number; answerHash: string }[]): Promise<boolean> {
+    // Delete existing questions first
+    await supabase
+      .from('user_security_questions')
+      .delete()
+      .eq('user_id', userId);
+
+    // Insert new questions
+    const rows = questions.map((q, i) => ({
+      id: `sq_${userId}_${q.questionId}_${Date.now()}_${i}`,
+      user_id: userId,
+      question_id: q.questionId,
+      answer_hash: q.answerHash,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }));
+
+    const { error } = await supabase
+      .from('user_security_questions')
+      .insert(rows);
+
+    if (error) {
+      console.error('saveSecurityQuestions error:', error);
+      return false;
+    }
+
+    // Mark user as having security questions set
+    await this.updateUser(userId, { securityQuestionsSet: true });
+    return true;
+  }
+
+  async getSecurityQuestionIds(userId: string): Promise<number[]> {
+    const questions = await this.getSecurityQuestions(userId);
+    return questions.map(q => q.questionId);
+  }
+
   // ─── Utility ──────────────────────────────────────────────────────────────
 
   async clearAllData(): Promise<void> {
+    await supabase.from('user_security_questions').delete().neq('id', '');
     await supabase.from('activities').delete().neq('id', '');
     await supabase.from('notifications').delete().neq('id', '');
     await supabase.from('settlements').delete().neq('id', '');

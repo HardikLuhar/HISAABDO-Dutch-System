@@ -65,7 +65,7 @@ export const ChangeMemberPasswordModal: React.FC<ChangeMemberPasswordModalProps>
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/65 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
-      <div className="bg-white rounded-t-2xl sm:rounded-3xl w-full sm:max-w-md shadow-2xl border border-slate-200 overflow-hidden max-h-[95vh] flex flex-col">
+      <div className="bg-white dark:bg-slate-900 rounded-t-2xl sm:rounded-3xl w-full sm:max-w-md shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden max-h-[95vh] flex flex-col transition-colors">
         {/* Header */}
         <div className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950 p-6 text-white text-center">
           <button
@@ -90,23 +90,23 @@ export const ChangeMemberPasswordModal: React.FC<ChangeMemberPasswordModalProps>
         {/* Body */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {currentPasscode && (
-            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 flex items-center justify-between text-xs">
-              <span className="text-slate-500">Current Password:</span>
-              <span className="font-mono font-bold bg-white px-2.5 py-1 rounded-lg border border-slate-200 text-slate-800 tracking-wider">
+            <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 flex items-center justify-between text-xs">
+              <span className="text-slate-500 dark:text-slate-400">Current Password:</span>
+              <span className="font-mono font-bold bg-white dark:bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 tracking-wider">
                 {currentPasscode}
               </span>
             </div>
           )}
 
-          <div className="bg-emerald-50/70 border border-emerald-200/80 rounded-2xl p-3.5 text-xs text-emerald-800 flex items-start gap-2.5">
-            <ShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
-            <p className="text-[11px] text-emerald-700 leading-relaxed">
+          <div className="bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 rounded-2xl p-3.5 text-xs text-emerald-800 dark:text-emerald-300 flex items-start gap-2.5">
+            <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
+            <p className="text-[11px] text-emerald-700 dark:text-emerald-300 leading-relaxed">
               Set a password you will easily remember (such as 4 numbers or a short word). You will use this password every time you log in to this group.
             </p>
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-800 mb-1.5">
+            <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5">
               New Password
             </label>
             <div className="relative">
@@ -118,12 +118,12 @@ export const ChangeMemberPasswordModal: React.FC<ChangeMemberPasswordModalProps>
                 onChange={(e) => setNewPassword(e.target.value)}
                 autoFocus
                 required
-                className="w-full pl-9 pr-10 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-mono font-bold tracking-wider"
+                className="w-full pl-9 pr-10 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-mono font-bold tracking-wider"
               />
               <button
                 type="button"
                 onClick={() => setShowNew(!showNew)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 cursor-pointer"
               >
                 {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -131,7 +131,7 @@ export const ChangeMemberPasswordModal: React.FC<ChangeMemberPasswordModalProps>
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-800 mb-1.5">
+            <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5">
               Confirm New Password
             </label>
             <div className="relative">
@@ -142,7 +142,7 @@ export const ChangeMemberPasswordModal: React.FC<ChangeMemberPasswordModalProps>
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
-                className="w-full pl-9 pr-10 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-mono font-bold tracking-wider"
+                className="w-full pl-9 pr-10 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-mono font-bold tracking-wider"
               />
             </div>
           </div>
@@ -151,7 +151,7 @@ export const ChangeMemberPasswordModal: React.FC<ChangeMemberPasswordModalProps>
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-2.5 px-4 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition cursor-pointer"
+              className="flex-1 py-2.5 px-4 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition cursor-pointer"
             >
               Cancel
             </button>

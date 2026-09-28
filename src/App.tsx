@@ -16,6 +16,7 @@ import { JoinGroupModal } from './components/JoinGroupModal';
 import { ReminderModal } from './components/ReminderModal';
 import { UserProfileModal } from './components/UserProfileModal';
 import { AuthModal } from './components/AuthModal';
+import { SecurityQuestionsSetupModal } from './components/SecurityQuestionsSetupModal';
 import { AuthView } from './components/AuthView';
 import { GroupPortalModal } from './components/GroupPortalModal';
 import { BottomNav } from './components/BottomNav';
@@ -72,6 +73,7 @@ function HisaabdoMain() {
 
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [isSecurityQuestionsOpen, setIsSecurityQuestionsOpen] = useState(false);
 
   // Group Link & Member Password Portal state
   const [portalGroupId, setPortalGroupId] = useState<string | null>(null);
@@ -128,6 +130,21 @@ function HisaabdoMain() {
       setIsLoadingData(false);
     }
   }, [user, loadDashboardData, selectedGroupId, loadGroupDetails]);
+
+  // Check if user needs to set up security questions (show popup once after login)
+  useEffect(() => {
+    if (user && user.securityQuestionsSet === false) {
+      // Check if we've already asked in this session
+      const dismissed = sessionStorage.getItem(`sq_dismissed_${user.id}`);
+      if (!dismissed) {
+        // Small delay so the main UI loads first
+        const timer = setTimeout(() => {
+          setIsSecurityQuestionsOpen(true);
+        }, 1500);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [user]);
 
   // Check URL query parameters on initial mount (e.g. ?group=grp_123 or ?code=GOA2026)
   useEffect(() => {
@@ -511,6 +528,22 @@ function HisaabdoMain() {
       <AuthModal
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}
+      />
+
+      {/* 10. Security Questions Setup Modal */}
+      <SecurityQuestionsSetupModal
+        isOpen={isSecurityQuestionsOpen}
+        onClose={() => {
+          setIsSecurityQuestionsOpen(false);
+          if (user) {
+            sessionStorage.setItem(`sq_dismissed_${user.id}`, 'true');
+          }
+        }}
+        onComplete={() => {
+          setIsSecurityQuestionsOpen(false);
+          // Refresh user profile to get updated securityQuestionsSet flag
+          loadDashboardData();
+        }}
       />
 
       {/* 10. Group Link & Member Password Portal Modal */}

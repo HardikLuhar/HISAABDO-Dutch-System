@@ -96,11 +96,29 @@ export const api = {
     });
   },
 
-  async forgotPassword(email: string): Promise<{ message: string }> {
-    return request<{ message: string }>('/api/auth/forgot-password', {
+  async forgotPasswordLookup(identifier: string): Promise<{ userId: string; userName: string; questionIds: number[] }> {
+    return request<{ userId: string; userName: string; questionIds: number[] }>('/api/auth/forgot-password/lookup', {
       method: 'POST',
-      body: JSON.stringify({ email })
+      body: JSON.stringify({ identifier })
     });
+  },
+
+  async forgotPasswordReset(userId: string, answers: { questionId: number; answer: string }[], newPassword: string): Promise<{ message: string }> {
+    return request<{ message: string }>('/api/auth/forgot-password/reset', {
+      method: 'POST',
+      body: JSON.stringify({ userId, answers, newPassword })
+    });
+  },
+
+  async saveSecurityQuestions(questions: { questionId: number; answer: string }[]): Promise<{ message: string }> {
+    return request<{ message: string }>('/api/auth/security-questions', {
+      method: 'POST',
+      body: JSON.stringify({ questions })
+    });
+  },
+
+  async getSecurityQuestionsStatus(): Promise<{ isSetUp: boolean; questionIds: number[] }> {
+    return request<{ isSetUp: boolean; questionIds: number[] }>('/api/auth/security-questions/status');
   },
 
   async logout(): Promise<void> {

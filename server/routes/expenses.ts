@@ -319,9 +319,44 @@ expensesRouter.put('/:groupId/expenses/:id', requireAuth, async (req: any, res) 
   }
 });
 
-// Delete Expense - Disabled (expenses can be edited but cannot be deleted)
-expensesRouter.delete('/:groupId/expenses/:id', requireAuth, (req: any, res) => {
-  return res.status(403).json({
-    error: 'Expenses cannot be deleted once added to maintain financial integrity. You can edit the expense details instead.'
-  });
+// Delete Expense - Only the person who created/added the entry can delete it
+expensesRouter.delete('/:groupId/expenses/:id', requireAuth, async (req: any, res) => {
+  try {
+    const { groupId, id } = req.params;
+    const existing = await db.getExpenseById(id);
+    if (!existing) {
+      return res.status(404).json({ error: 'Expense not found' });
+    }
+    if (existing.groupId !== groupId) {
+      return res.status(400).json({ error: 'Expense does not belong to this group' });
+    }
+
+    // Check if the current user is the person who added this expense entry
+    if (existing.createdBy !== req.user.id) {
+      return res.status(403).json({ error: 'Only the member who added this expense entry can delete it' });
+    }
+
+    const success = await db.deleteExpense(id);
+    if (!success) {
+      return res.status(500).json({ error: 'Failed to delete expense' });
+    }
+
+    await db.createActivity({
+      id: `act_${Date.now()}`,
+      groupId,
+      userId: req.user.id,
+      userName: req.user.name,
+      userAvatar: req.user.avatarUrl,
+      action: 'DELETED_EXPENSE',
+      description: `${req.user.name} deleted expense "${existing.description}"`,
+      amount: existing.amount,
+      currency: existing.currency,
+      createdAt: new Date().toISOString()
+    });
+
+    return res.json({ success: true, message: 'Expense deleted successfully' });
+  } catch (err: any) {
+    console.error('delete expense error:', err);
+    return res.status(500).json({ error: err.message || 'Internal server error' });
+  }
 });

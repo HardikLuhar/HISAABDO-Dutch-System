@@ -103,6 +103,30 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
   const [showDeleteGroupConfirm, setShowDeleteGroupConfirm] = useState(false);
   const [isDeletingGroup, setIsDeletingGroup] = useState(false);
 
+  // Expense deletion confirmation state (creator-only)
+  const [expenseToDelete, setExpenseToDelete] = useState<ExpenseItem | null>(null);
+  const [isDeletingExpense, setIsDeletingExpense] = useState(false);
+
+  const handleConfirmDeleteExpense = async () => {
+    if (!expenseToDelete) return;
+    if (expenseToDelete.createdBy !== user?.id) {
+      showToast('Only the member who added this expense entry can delete it', 'error');
+      setExpenseToDelete(null);
+      return;
+    }
+    setIsDeletingExpense(true);
+    try {
+      await api.deleteExpense(group.id, expenseToDelete.id);
+      showToast(`Expense "${expenseToDelete.description}" deleted successfully`, 'success');
+      setExpenseToDelete(null);
+      onRefresh();
+    } catch (err: any) {
+      showToast(err.message || 'Failed to delete expense', 'error');
+    } finally {
+      setIsDeletingExpense(false);
+    }
+  };
+
   // Password change modal state
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [passwordModalTarget, setPasswordModalTarget] = useState<{ userId: string; name: string; passcode: string } | null>(null);
@@ -448,15 +472,15 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
       {activeTab === 'expenses' && (
         <div className="space-y-4">
           {/* Filters Bar */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-sm transition-colors">
             <div className="relative flex-1">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
               <input
                 type="text"
                 placeholder="Search expenses by title or note..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
               />
             </div>
 
@@ -464,7 +488,7 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none"
+                className="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-700 dark:text-slate-300 focus:outline-none"
               >
                 <option value="ALL">All Categories</option>
                 {CATEGORIES.map(c => (
@@ -475,7 +499,7 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
               <select
                 value={selectedPayer}
                 onChange={(e) => setSelectedPayer(e.target.value)}
-                className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none"
+                className="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-700 dark:text-slate-300 focus:outline-none"
               >
                 <option value="ALL">Paid by Anyone</option>
                 {groupData.balances.map(b => (
@@ -487,19 +511,19 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
 
           {/* Timeline List */}
           {Object.keys(groupedExpenses).length === 0 ? (
-            <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-12 text-center">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-3">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 p-12 text-center transition-colors">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto mb-3">
                 <Receipt className="w-6 h-6" />
               </div>
-              <h3 className="font-semibold text-slate-800 text-sm">No expenses found</h3>
-              <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+              <h3 className="font-semibold text-slate-800 dark:text-white text-sm">No expenses found</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
                 {searchQuery || selectedCategory !== 'ALL' || selectedPayer !== 'ALL'
                   ? 'Try changing your search or filter options.'
                   : 'Add your first group expense to see it in this timeline.'}
               </p>
               <button
                 onClick={() => onOpenAddExpense(group.id)}
-                className="mt-4 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition"
+                className="mt-4 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition cursor-pointer"
               >
                 + Add First Expense
               </button>
@@ -510,21 +534,22 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
                 <div key={dateGroup} className="space-y-2.5">
                   <div className="flex items-center gap-2 px-1">
                     <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">{dateGroup}</span>
+                    <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{dateGroup}</span>
                   </div>
 
-                  <div className="bg-white rounded-2xl border border-slate-200/80 divide-y divide-slate-100 shadow-sm overflow-hidden">
+                  <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 divide-y divide-slate-100 dark:divide-slate-800/80 shadow-sm overflow-hidden transition-colors">
                     {items.map((exp) => {
                       const cat = getCategoryMeta(exp.category);
                       const mySplit = exp.splits.find(s => s.userId === user?.id);
                       const myPayment = exp.paidBy.find(p => p.userId === user?.id);
                       const primaryPayer = exp.paidBy[0];
+                      const isCreator = user?.id === exp.createdBy;
 
                       return (
                         <div
                           key={exp.id}
                           onClick={() => onOpenExpenseDetail(exp)}
-                          className="p-4 hover:bg-slate-50/80 transition flex items-center justify-between gap-4 cursor-pointer group"
+                          className="p-4 hover:bg-slate-50/80 dark:hover:bg-slate-800/60 transition flex items-center justify-between gap-4 cursor-pointer group"
                         >
                           {/* Left: Category Icon & Info */}
                           <div className="flex items-center gap-3.5 min-w-0">
@@ -532,18 +557,18 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
                               {cat.icon}
                             </div>
                             <div className="min-w-0">
-                              <h4 className="font-semibold text-slate-900 text-sm group-hover:text-emerald-600 transition truncate">
+                              <h4 className="font-semibold text-slate-900 dark:text-white text-sm group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition truncate">
                                 {exp.description}
                               </h4>
-                              <p className="text-xs text-slate-500 mt-0.5 truncate">
-                                <span className="font-medium text-slate-700">
+                              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                                <span className="font-medium text-slate-700 dark:text-slate-300">
                                   {exp.paidBy.length > 1
                                     ? `${exp.paidBy.length} people paid`
                                     : `${primaryPayer?.userName || 'Someone'} paid`}
                                 </span>
                                 {' • '}
                                 <span>{exp.splits.length} participants</span>
-                                {exp.receiptUrl && <span className="ml-1 text-[10px] text-emerald-600 font-bold">📎 Receipt</span>}
+                                {exp.receiptUrl && <span className="ml-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">📎 Receipt</span>}
                               </p>
                             </div>
                           </div>
@@ -551,16 +576,16 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
                           {/* Right: Total Amount & Personal Involvement & Quick Actions */}
                           <div className="text-right flex-shrink-0 flex items-center gap-3">
                             <div>
-                              <div className="text-sm font-bold text-slate-900">
+                              <div className="text-sm font-bold text-slate-900 dark:text-white">
                                 {formatCurrency(exp.amount, currency)}
                               </div>
                               <div className="text-[11px] font-medium">
                                 {myPayment && myPayment.amount > (mySplit?.amount || 0) ? (
-                                  <span className="text-emerald-600">
+                                  <span className="text-emerald-600 dark:text-emerald-400">
                                     you lent {formatCurrency(myPayment.amount - (mySplit?.amount || 0), currency)}
                                   </span>
                                 ) : mySplit && (!myPayment || myPayment.amount < mySplit.amount) ? (
-                                  <span className="text-rose-600">
+                                  <span className="text-rose-600 dark:text-rose-400">
                                     you borrowed {formatCurrency(mySplit.amount - (myPayment?.amount || 0), currency)}
                                   </span>
                                 ) : (
@@ -569,8 +594,21 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
                               </div>
                             </div>
 
-                            {/* Quick Edit button */}
+                            {/* Quick Actions */}
                             <div className="flex items-center gap-1">
+                              {isCreator && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setExpenseToDelete(exp);
+                                  }}
+                                  className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition cursor-pointer"
+                                  title="Delete your entry"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
                               <button
                                 type="button"
                                 onClick={(e) => {
@@ -581,14 +619,14 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
                                     onOpenExpenseDetail(exp);
                                   }
                                 }}
-                                className="p-1.5 text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition cursor-pointer"
+                                className="p-1.5 text-slate-400 hover:text-emerald-700 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-lg transition cursor-pointer"
                                 title="Edit Expense"
                               >
                                 <Edit2 className="w-4 h-4" />
                               </button>
                             </div>
 
-                            <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition hidden sm:block" />
+                            <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 group-hover:text-slate-500 transition hidden sm:block" />
                           </div>
                         </div>
                       );
@@ -1240,17 +1278,52 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
         </div>
       )}
 
+      {/* MODAL: Confirm Delete Expense (Creator Only) */}
+      {expenseToDelete && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md shadow-2xl border border-slate-200 dark:border-slate-800 p-5 sm:p-6 space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <div className="text-center">
+              <h3 className="font-bold text-slate-900 dark:text-white text-base">Delete Expense Entry?</h3>
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+                Are you sure you want to delete <strong className="text-slate-900 dark:text-white">"{expenseToDelete.description}"</strong> ({formatCurrency(expenseToDelete.amount, currency)})? This will recalculate all group balances.
+              </p>
+            </div>
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setExpenseToDelete(null)}
+                disabled={isDeletingExpense}
+                className="flex-1 py-2.5 px-4 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteExpense}
+                disabled={isDeletingExpense}
+                className="flex-1 py-2.5 px-4 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-md shadow-rose-600/20 transition cursor-pointer disabled:opacity-50"
+              >
+                {isDeletingExpense ? 'Deleting...' : 'Yes, Delete Entry'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* MODAL: Confirm Remove Member */}
       {memberToRemove && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
-          <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md shadow-2xl border border-slate-200 p-5 sm:p-6 space-y-4">
-            <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md shadow-2xl border border-slate-200 dark:border-slate-800 p-5 sm:p-6 space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 flex items-center justify-center mx-auto">
               <Users className="w-6 h-6" />
             </div>
             <div className="text-center">
-              <h3 className="font-bold text-slate-900 text-base">Remove Member?</h3>
-              <p className="text-xs text-slate-600 mt-1">
-                Are you sure you want to remove <strong className="text-slate-900">{memberToRemove.name}</strong> from this group?
+              <h3 className="font-bold text-slate-900 dark:text-white text-base">Remove Member?</h3>
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+                Are you sure you want to remove <strong className="text-slate-900 dark:text-white">{memberToRemove.name}</strong> from this group?
               </p>
             </div>
             <div className="flex items-center gap-3 pt-2">
@@ -1258,7 +1331,7 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
                 type="button"
                 onClick={() => setMemberToRemove(null)}
                 disabled={isRemovingMember}
-                className="flex-1 py-2.5 px-4 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition cursor-pointer"
+                className="flex-1 py-2.5 px-4 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition cursor-pointer"
               >
                 Cancel
               </button>
@@ -1278,14 +1351,14 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
       {/* MODAL: Confirm Delete Group */}
       {showDeleteGroupConfirm && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
-          <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md shadow-2xl border border-slate-200 p-5 sm:p-6 space-y-4">
-            <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md shadow-2xl border border-slate-200 dark:border-slate-800 p-5 sm:p-6 space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto">
               <AlertTriangle className="w-6 h-6" />
             </div>
             <div className="text-center">
-              <h3 className="font-bold text-slate-900 text-base">Delete Entire Group?</h3>
-              <p className="text-xs text-slate-600 mt-1">
-                Are you sure you want to permanently delete <strong className="text-slate-900">"{group.name}"</strong>? All expenses, settlements, and member data will be deleted permanently.
+              <h3 className="font-bold text-slate-900 dark:text-white text-base">Delete Entire Group?</h3>
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+                Are you sure you want to permanently delete <strong className="text-slate-900 dark:text-white">"{group.name}"</strong>? All expenses, settlements, and member data will be deleted permanently.
               </p>
             </div>
             <div className="flex items-center gap-3 pt-2">
@@ -1293,7 +1366,7 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
                 type="button"
                 onClick={() => setShowDeleteGroupConfirm(false)}
                 disabled={isDeletingGroup}
-                className="flex-1 py-2.5 px-4 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition cursor-pointer"
+                className="flex-1 py-2.5 px-4 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition cursor-pointer"
               >
                 Cancel
               </button>

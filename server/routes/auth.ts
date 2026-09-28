@@ -265,16 +265,139 @@ authRouter.put('/profile', requireAuth, async (req: any, res) => {
   }
 });
 
-// Forgot Password
-authRouter.post('/forgot-password', async (req, res) => {
-  const { email } = req.body;
-  const user = await db.getUserByEmail(email);
-  // Always return friendly response to avoid email enumeration
-  return res.json({
-    message: user
-      ? `Password reset link sent to ${email} (for demo, password is: password123)`
-      : `If an account with ${email} exists, a reset link has been dispatched.`
-  });
+// Forgot Password — Step 1: Lookup user and return their question IDs
+authRouter.post('/forgot-password/lookup', async (req, res) => {
+  try {
+    const { identifier } = req.body;
+    if (!identifier || !identifier.trim()) {
+      return res.status(400).json({ error: 'Please enter your name or email' });
+    }
+
+    const user = await db.findUserByIdentifier(identifier.trim());
+    if (!user) {
+      return res.status(404).json({ error: 'No account found with this name or email' });
+    }
+
+    if (!user.securityQuestionsSet) {
+      return res.status(400).json({ error: 'No security questions set up for this account. Please contact support.' });
+    }
+
+    const questionIds = await db.getSecurityQuestionIds(user.id);
+    if (questionIds.length === 0) {
+      return res.status(400).json({ error: 'No security questions found. Please contact support.' });
+    }
+
+    return res.json({ userId: user.id, userName: user.name, questionIds });
+  } catch (err: any) {
+    console.error('forgot-password lookup error:', err);
+    return res.status(500).json({ error: err.message || 'Internal server error' });
+  }
+});
+
+// Forgot Password — Step 2: Verify answers and reset password
+authRouter.post('/forgot-password/reset', async (req, res) => {
+  try {
+    const { userId, answers, newPassword } = req.body;
+
+    if (!userId || !answers || !Array.isArray(answers) || answers.length !== 3) {
+      return res.status(400).json({ error: 'Please answer all 3 security questions' });
+    }
+    if (!newPassword || newPassword.trim().length < 1) {
+      return res.status(400).json({ error: 'Please enter a new password' });
+    }
+
+    const user = await db.getUserById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const storedQuestions = await db.getSecurityQuestions(userId);
+    if (storedQuestions.length === 0) {
+      return res.status(400).json({ error: 'No security questions set up for this account' });
+    }
+
+    // Verify each answer
+    let allCorrect = true;
+    for (const ans of answers) {
+      const stored = storedQuestions.find(q => q.questionId === ans.questionId);
+      if (!stored) {
+        allCorrect = false;
+        break;
+      }
+      const isMatch = verifyPassword(ans.answer.trim().toLowerCase(), stored.answerHash);
+      if (!isMatch) {
+        allCorrect = false;
+        break;
+      }
+    }
+
+    if (!allCorrect) {
+      return res.status(401).json({ error: 'One or more security answers are incorrect. Please try again.' });
+    }
+
+    // Reset password
+    const newHash = hashPassword(newPassword.trim());
+    await db.updateUser(userId, { passwordHash: newHash });
+
+    return res.json({ message: 'Password reset successfully! You can now log in with your new password.' });
+  } catch (err: any) {
+    console.error('forgot-password reset error:', err);
+    return res.status(500).json({ error: err.message || 'Internal server error' });
+  }
+});
+
+// Security Questions — Save (authenticated user sets up their questions)
+authRouter.post('/security-questions', requireAuth, async (req: any, res) => {
+  try {
+    const { questions } = req.body;
+
+    if (!questions || !Array.isArray(questions) || questions.length !== 3) {
+      return res.status(400).json({ error: 'Please select and answer exactly 3 security questions' });
+    }
+
+    // Validate each question has a questionId and answer
+    for (const q of questions) {
+      if (q.questionId === undefined || q.questionId === null || !q.answer || !q.answer.trim()) {
+        return res.status(400).json({ error: 'Each security question must have a question ID and answer' });
+      }
+    }
+
+    // Check for duplicate question IDs
+    const ids = questions.map((q: any) => q.questionId);
+    if (new Set(ids).size !== 3) {
+      return res.status(400).json({ error: 'Please select 3 different questions' });
+    }
+
+    // Hash answers (case-insensitive)
+    const hashedQuestions = questions.map((q: any) => ({
+      questionId: q.questionId,
+      answerHash: hashPassword(q.answer.trim().toLowerCase()),
+    }));
+
+    const success = await db.saveSecurityQuestions(req.user.id, hashedQuestions);
+    if (!success) {
+      return res.status(500).json({ error: 'Failed to save security questions' });
+    }
+
+    return res.json({ message: 'Security questions saved successfully!' });
+  } catch (err: any) {
+    console.error('save security questions error:', err);
+    return res.status(500).json({ error: err.message || 'Internal server error' });
+  }
+});
+
+// Security Questions — Check if user has set them up
+authRouter.get('/security-questions/status', requireAuth, async (req: any, res) => {
+  try {
+    const questionIds = await db.getSecurityQuestionIds(req.user.id);
+    return res.json({
+      isSetUp: questionIds.length >= 3,
+      questionIds,
+    });
+  } catch (err: any) {
+    console.error('security questions status error:', err);
+    return res.status(500).json({ error: err.message || 'Internal server error' });
+  }
 });
 
 // Get all users for member selection

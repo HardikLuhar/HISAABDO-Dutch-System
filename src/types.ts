@@ -11,6 +11,7 @@ export interface User {
   avatarUrl: string;
   phone?: string;
   preferredCurrency: CurrencyCode;
+  securityQuestionsSet?: boolean;
   createdAt: string;
 }
 

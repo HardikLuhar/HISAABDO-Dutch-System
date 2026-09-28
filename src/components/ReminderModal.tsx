@@ -51,39 +51,39 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
-      <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md shadow-2xl border border-slate-200 overflow-hidden max-h-[95vh] flex flex-col">
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 bg-slate-50/70 flex-shrink-0">
+      <div className="bg-white dark:bg-slate-900 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden max-h-[95vh] flex flex-col transition-colors">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/50 flex-shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 flex items-center justify-center">
               <Bell className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="font-bold text-slate-900 text-base">Send Payment Reminder</h2>
-              <p className="text-[11px] text-slate-500">Notify member about pending balance</p>
+              <h2 className="font-bold text-slate-900 dark:text-white text-base">Send Payment Reminder</h2>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">Notify member about pending balance</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg">
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-1.5 rounded-lg cursor-pointer">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <form onSubmit={handleSendReminder} className="p-6 space-y-4">
-          <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl text-xs space-y-2">
+          <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-4 rounded-xl text-xs space-y-2">
             <div className="flex items-center justify-between">
-              <span className="font-semibold text-amber-900">Recipient:</span>
-              <span className="font-bold text-slate-900">{toName}</span>
+              <span className="font-semibold text-amber-900 dark:text-amber-300">Recipient:</span>
+              <span className="font-bold text-slate-900 dark:text-white">{toName}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="font-semibold text-amber-900">Pending Debt:</span>
-              <span className="font-bold text-rose-700 text-sm">{formatCurrency(amount, currency)}</span>
+              <span className="font-semibold text-amber-900 dark:text-amber-300">Pending Debt:</span>
+              <span className="font-bold text-rose-700 dark:text-rose-400 text-sm">{formatCurrency(amount, currency)}</span>
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
               Message Preview
             </label>
-            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600 italic">
+            <div className="p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-600 dark:text-slate-300 italic">
               "Hi {toName}, this is a friendly reminder regarding the pending balance of {formatCurrency(amount, currency)} on Hisaabdo. Whenever you have a moment to square up!"
             </div>
           </div>
@@ -92,7 +92,7 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 rounded-xl"
+              className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white bg-slate-100 dark:bg-slate-800 rounded-xl cursor-pointer"
             >
               Cancel
             </button>

@@ -12,7 +12,17 @@ export interface User {
   avatarUrl: string;
   phone?: string;
   preferredCurrency: CurrencyCode;
+  securityQuestionsSet?: boolean;
   createdAt: string;
+}
+
+export interface UserSecurityQuestion {
+  id: string;
+  userId: string;
+  questionId: number;
+  answerHash: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface GroupMember {

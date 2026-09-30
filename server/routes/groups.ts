@@ -259,32 +259,24 @@ groupsRouter.post('/', requireAuth, async (req: any, res) => {
       }
     ];
 
-    // If member names or emails provided, find or add them
+    // If member names or emails provided, find existing registered users only
+    const skippedNames: string[] = [];
     if (Array.isArray(memberEmails)) {
       const allUsers = await db.getUsers();
       for (const rawItem of memberEmails) {
         const cleanItem = (rawItem || '').trim();
         if (!cleanItem || cleanItem.toLowerCase() === req.user.email.toLowerCase() || cleanItem.toLowerCase() === req.user.name.toLowerCase()) continue;
-        let existingUser = allUsers.find(u =>
+        const existingUser = allUsers.find(u =>
           u.email.toLowerCase() === cleanItem.toLowerCase() ||
           u.name.toLowerCase() === cleanItem.toLowerCase()
         );
         if (!existingUser) {
-          // Create user stub
-          const namePart = cleanItem.includes('@') ? cleanItem.split('@')[0] : cleanItem;
-          const newUserId = `usr_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
-          existingUser = await db.createUser({
-            id: newUserId,
-            name: namePart.charAt(0).toUpperCase() + namePart.slice(1),
-            email: cleanItem.includes('@') ? cleanItem.toLowerCase() : `${namePart.toLowerCase().replace(/[^a-z0-9]/g, '') || 'user'}_${Math.random().toString(36).substr(2, 4)}@hisaabdo.local`,
-            passwordHash: '',
-            avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(namePart)}`,
-            preferredCurrency: defaultCurrency as CurrencyCode,
-            createdAt: new Date().toISOString()
-          });
+          // Skip non-registered users — don't create stubs
+          skippedNames.push(cleanItem);
+          continue;
         }
 
-        if (!members.some(m => m.userId === existingUser!.id)) {
+        if (!members.some(m => m.userId === existingUser.id)) {
           members.push({
             userId: existingUser.id,
             role: 'member' as const,
@@ -319,7 +311,13 @@ groupsRouter.post('/', requireAuth, async (req: any, res) => {
       createdAt: new Date().toISOString()
     });
 
-    return res.status(201).json({ group: newGroup });
+    const response: any = { group: newGroup };
+    if (skippedNames.length > 0) {
+      response.skippedNames = skippedNames;
+      response.warning = `The following names were not found as registered users and were skipped: ${skippedNames.join(', ')}. They need to register first before being added.`;
+    }
+
+    return res.status(201).json(response);
   } catch (err: any) {
     console.error('create group error:', err);
     return res.status(500).json({ error: err.message || 'Internal server error' });
@@ -457,7 +455,7 @@ groupsRouter.delete('/:id', requireAuth, async (req: any, res) => {
   }
 });
 
-// Add Member by Email or Username
+// Add Member by Email or Username (Admin or Site Admin only, must be existing registered user)
 groupsRouter.post('/:id/members', requireAuth, async (req: any, res) => {
   try {
     const groupId = req.params.id;
@@ -472,6 +470,17 @@ groupsRouter.post('/:id/members', requireAuth, async (req: any, res) => {
       return res.status(404).json({ error: 'Group not found' });
     }
 
+    // Permission check: Only group admin or site admin (Hardik) can add members
+    const isGroupAdmin = group.members.some(m => m.userId === req.user.id && m.role === 'admin');
+    const isSiteAdmin = Boolean(
+      (req.user.name && req.user.name.trim().toLowerCase() === 'hardik') ||
+      (req.user.email && req.user.email.toLowerCase().includes('hardik'))
+    );
+
+    if (!isGroupAdmin && !isSiteAdmin) {
+      return res.status(403).json({ error: 'Only the group admin can add members' });
+    }
+
     const cleanId = identifier.trim().toLowerCase();
     const allUsers = await db.getUsers();
     let user = allUsers.find(u =>
@@ -480,18 +489,7 @@ groupsRouter.post('/:id/members', requireAuth, async (req: any, res) => {
     );
 
     if (!user) {
-      // Create new invited user
-      const namePart = identifier.includes('@') ? identifier.split('@')[0] : identifier;
-      const newUserId = `usr_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
-      user = await db.createUser({
-        id: newUserId,
-        name: namePart.charAt(0).toUpperCase() + namePart.slice(1),
-        email: identifier.includes('@') ? cleanId : `${namePart.toLowerCase()}@hisaabdo.local`,
-        passwordHash: '',
-        avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(namePart)}`,
-        preferredCurrency: group.defaultCurrency,
-        createdAt: new Date().toISOString()
-      });
+      return res.status(404).json({ error: `No registered user found with the name or email "${identifier.trim()}". The person must register first before they can be added to a group.` });
     }
 
     const result = await db.addGroupMember(groupId, user.id, 'member');

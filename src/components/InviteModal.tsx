@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNotification } from '../context/NotificationContext';
+import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
-import { GroupMemberInfo } from '../types';
+import { GroupMemberInfo, User } from '../types';
 import {
   X,
   Users,
@@ -15,7 +16,9 @@ import {
   Edit2,
   Lock,
   Sparkles,
-  Link
+  Link,
+  Search,
+  ShieldAlert
 } from 'lucide-react';
 
 interface InviteModalProps {
@@ -38,9 +41,18 @@ export const InviteModal: React.FC<InviteModalProps> = ({
   onMemberAdded
 }) => {
   const { showToast } = useNotification();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'members' | 'add' | 'general'>('members');
   const [identifier, setIdentifier] = useState('');
   const [isAdding, setIsAdding] = useState(false);
+
+  // Autocomplete suggestion state
+  const [suggestions, setSuggestions] = useState<User[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // New member just added info for instant copy
   const [justAddedMember, setJustAddedMember] = useState<{
@@ -56,6 +68,63 @@ export const InviteModal: React.FC<InviteModalProps> = ({
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [editingPasscode, setEditingPasscode] = useState('');
   const [isSavingPasscode, setIsSavingPasscode] = useState(false);
+
+  // Determine if user can add members (group admin or site admin)
+  const isGroupAdmin = members.some(m => m.userId === user?.id && m.role === 'admin');
+  const isSiteAdmin = Boolean(
+    (user?.name && user.name.trim().toLowerCase() === 'hardik') ||
+    (user?.email && user.email.toLowerCase().includes('hardik'))
+  );
+  const canAddMembers = isGroupAdmin || isSiteAdmin;
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (suggestionsRef.current && !suggestionsRef.current.contains(e.target as Node) &&
+          inputRef.current && !inputRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Search users on input change with debounce
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    const query = identifier.trim();
+    if (!query) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    searchTimeoutRef.current = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const res = await api.searchUsers(query);
+        // Filter out users that are already members of this group
+        const existingMemberIds = new Set(members.map(m => m.userId));
+        const filtered = res.users.filter(u => !existingMemberIds.has(u.id));
+        setSuggestions(filtered);
+        setShowSuggestions(filtered.length > 0);
+      } catch (err) {
+        console.error('Search error:', err);
+        setSuggestions([]);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 250);
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [identifier, members]);
 
   if (!isOpen) return null;
 
@@ -83,6 +152,12 @@ export const InviteModal: React.FC<InviteModalProps> = ({
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
+  const handleSelectSuggestion = (selectedUser: User) => {
+    setIdentifier(selectedUser.name);
+    setShowSuggestions(false);
+    setSuggestions([]);
+  };
+
   const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!identifier.trim()) return;
@@ -98,6 +173,8 @@ export const InviteModal: React.FC<InviteModalProps> = ({
       });
       showToast(`${res.user.name} added! Unique password generated: ${passcode}`, 'success');
       setIdentifier('');
+      setSuggestions([]);
+      setShowSuggestions(false);
       onMemberAdded();
     } catch (err: any) {
       showToast(err.message || 'Failed to add member', 'error');
@@ -167,17 +244,19 @@ export const InviteModal: React.FC<InviteModalProps> = ({
             <span className="sm:hidden">Passwords ({members.length})</span>
           </button>
 
-          <button
-            onClick={() => setActiveTab('add')}
-            className={`py-3 px-3 text-xs font-bold border-b-2 transition flex items-center gap-2 cursor-pointer ${
-              activeTab === 'add'
-                ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400'
-                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
-            }`}
-          >
-            <UserPlus className="w-4 h-4" />
-            <span>+ Add Member</span>
-          </button>
+          {canAddMembers && (
+            <button
+              onClick={() => setActiveTab('add')}
+              className={`py-3 px-3 text-xs font-bold border-b-2 transition flex items-center gap-2 cursor-pointer ${
+                activeTab === 'add'
+                  ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400'
+                  : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
+              }`}
+            >
+              <UserPlus className="w-4 h-4" />
+              <span>+ Add Member</span>
+            </button>
+          )}
 
           <button
             onClick={() => setActiveTab('general')}
@@ -332,33 +411,100 @@ export const InviteModal: React.FC<InviteModalProps> = ({
             </div>
           )}
 
-          {/* TAB 2: ADD NEW MEMBER */}
-          {activeTab === 'add' && (
+          {/* TAB 2: ADD NEW MEMBER (Admin only) */}
+          {activeTab === 'add' && canAddMembers && (
             <div className="space-y-4">
+              <div className="bg-blue-50/80 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-2xl p-3 text-xs text-blue-900 dark:text-blue-200 flex items-start gap-2.5">
+                <Search className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold">Search & Add:</span>
+                  <p className="text-[11px] text-blue-800 dark:text-blue-300 mt-0.5 leading-relaxed">
+                    Start typing a person's name and matching registered users will appear below. Select the correct person to add them accurately.
+                  </p>
+                </div>
+              </div>
+
               <form onSubmit={handleAddMember} className="space-y-3">
                 <label className="block text-xs font-bold text-slate-900 dark:text-white">
-                  Friend's Name
+                  Search Registered User
                 </label>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
-                    <Users className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
+                      ref={inputRef}
                       type="text"
-                      placeholder="e.g. Rahul, Sneha, Rohan..."
+                      placeholder="Type a name... e.g. H, Ha, Hardik"
                       value={identifier}
                       onChange={(e) => setIdentifier(e.target.value)}
+                      onFocus={() => {
+                        if (suggestions.length > 0) setShowSuggestions(true);
+                      }}
                       autoFocus
-                      className="w-full pl-9 pr-3 py-2 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-emerald-500/20"
+                      autoComplete="off"
+                      className="w-full pl-9 pr-3 py-2.5 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                     />
+                    {isSearching && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                      </div>
+                    )}
+
+                    {/* Suggestions Dropdown */}
+                    {showSuggestions && suggestions.length > 0 && (
+                      <div
+                        ref={suggestionsRef}
+                        className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 max-h-52 overflow-y-auto"
+                      >
+                        <div className="px-3 py-1.5 border-b border-slate-100 dark:border-slate-700">
+                          <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                            {suggestions.length} user{suggestions.length !== 1 ? 's' : ''} found
+                          </span>
+                        </div>
+                        {suggestions.map((s) => (
+                          <button
+                            key={s.id}
+                            type="button"
+                            onClick={() => handleSelectSuggestion(s)}
+                            className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition cursor-pointer text-left border-b border-slate-50 dark:border-slate-700/50 last:border-0"
+                          >
+                            <img
+                              src={s.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${s.name}`}
+                              alt={s.name}
+                              className="w-8 h-8 rounded-full object-cover border border-slate-200 bg-slate-50 flex-shrink-0"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                                {s.name}
+                              </div>
+                              <div className="text-[10px] text-slate-400 dark:text-slate-500 truncate">
+                                {s.email.includes('@hisaabdo.local') ? 'Registered user' : s.email}
+                              </div>
+                            </div>
+                            <UserPlus className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* No results message */}
+                    {identifier.trim().length > 0 && !isSearching && suggestions.length === 0 && showSuggestions === false && (
+                      <div className="absolute top-full left-0 right-0 mt-1">
+                        {/* This shows only after search completes with no results */}
+                      </div>
+                    )}
                   </div>
                   <button
                     type="submit"
                     disabled={isAdding || !identifier.trim()}
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl transition disabled:opacity-50 cursor-pointer"
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl transition disabled:opacity-50 cursor-pointer whitespace-nowrap"
                   >
                     {isAdding ? 'Adding...' : 'Add Friend'}
                   </button>
                 </div>
+                <p className="text-[10px] text-slate-400 dark:text-slate-500">
+                  Only registered users can be added. The person must have an account on Hisaabdo first.
+                </p>
               </form>
 
               {/* Just added member preview card */}
@@ -406,6 +552,21 @@ export const InviteModal: React.FC<InviteModalProps> = ({
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Non-admin message for add tab */}
+          {activeTab === 'add' && !canAddMembers && (
+            <div className="py-10 text-center space-y-3">
+              <div className="w-14 h-14 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto">
+                <ShieldAlert className="w-7 h-7" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-slate-800 dark:text-white">Admin Access Required</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Only the group admin can add new members. Contact your group admin to have someone added.
+                </p>
+              </div>
             </div>
           )}
 

@@ -205,6 +205,26 @@ class Database {
     return undefined;
   }
 
+  async searchUsers(query: string): Promise<User[]> {
+    const clean = (query || '').trim().toLowerCase();
+    if (!clean) return [];
+    const allUsers = await this.getUsers();
+    return allUsers.filter(u =>
+      (u.name || '').toLowerCase().startsWith(clean) ||
+      (u.email || '').toLowerCase().startsWith(clean)
+    );
+  }
+
+  async isNameTaken(name: string, excludeUserId?: string): Promise<boolean> {
+    const clean = (name || '').trim().toLowerCase();
+    if (!clean) return false;
+    const allUsers = await this.getUsers();
+    return allUsers.some(u =>
+      (u.name || '').trim().toLowerCase() === clean &&
+      u.id !== excludeUserId
+    );
+  }
+
   async createUser(user: User): Promise<User> {
     this.invalidateUsersCache();
     const { error } = await supabase

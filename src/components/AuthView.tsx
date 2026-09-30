@@ -59,6 +59,29 @@ export const AuthView: React.FC = () => {
 
   const [isLoading, setIsLoading] = useState(false);
 
+  // Real-time name availability check
+  const [nameCheckStatus, setNameCheckStatus] = useState<'idle' | 'checking' | 'taken' | 'available'>('idle');
+  const nameCheckTimeout = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  React.useEffect(() => {
+    if (nameCheckTimeout.current) clearTimeout(nameCheckTimeout.current);
+    const cleanName = registerName.trim();
+    if (!cleanName || cleanName.length < 2) {
+      setNameCheckStatus('idle');
+      return;
+    }
+    setNameCheckStatus('checking');
+    nameCheckTimeout.current = setTimeout(async () => {
+      try {
+        const res = await api.checkNameAvailability(cleanName);
+        setNameCheckStatus(res.taken ? 'taken' : 'available');
+      } catch {
+        setNameCheckStatus('idle');
+      }
+    }, 400);
+    return () => { if (nameCheckTimeout.current) clearTimeout(nameCheckTimeout.current); };
+  }, [registerName]);
+
   // Handle verified login
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -535,6 +558,19 @@ export const AuthView: React.FC = () => {
                   id="input-register-name"
                 />
               </div>
+              {nameCheckStatus === 'taken' && (
+                <p className="text-[11px] text-rose-600 dark:text-rose-400 font-semibold mt-1 flex items-center gap-1">
+                  ⚠️ This name is already taken. Try adding a number (e.g. "{registerName.trim()}1")
+                </p>
+              )}
+              {nameCheckStatus === 'available' && registerName.trim().length >= 2 && (
+                <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold mt-1 flex items-center gap-1">
+                  ✓ This name is available!
+                </p>
+              )}
+              {nameCheckStatus === 'checking' && (
+                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">Checking availability...</p>
+              )}
             </div>
 
             <div>

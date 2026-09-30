@@ -59,6 +59,29 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   const [isLoading, setIsLoading] = useState(false);
 
+  // Real-time name availability check
+  const [nameCheckStatus, setNameCheckStatus] = useState<'idle' | 'checking' | 'taken' | 'available'>('idle');
+  const nameCheckTimeout = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  React.useEffect(() => {
+    if (nameCheckTimeout.current) clearTimeout(nameCheckTimeout.current);
+    const cleanName = registerName.trim();
+    if (!cleanName || cleanName.length < 2) {
+      setNameCheckStatus('idle');
+      return;
+    }
+    setNameCheckStatus('checking');
+    nameCheckTimeout.current = setTimeout(async () => {
+      try {
+        const res = await api.checkNameAvailability(cleanName);
+        setNameCheckStatus(res.taken ? 'taken' : 'available');
+      } catch {
+        setNameCheckStatus('idle');
+      }
+    }, 400);
+    return () => { if (nameCheckTimeout.current) clearTimeout(nameCheckTimeout.current); };
+  }, [registerName]);
+
   if (!isOpen) return null;
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -505,6 +528,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium"
                 />
               </div>
+              {nameCheckStatus === 'taken' && (
+                <p className="text-[11px] text-rose-600 dark:text-rose-400 font-semibold mt-1">
+                  ⚠️ This name is already taken. Try "{registerName.trim()}1" or similar.
+                </p>
+              )}
+              {nameCheckStatus === 'available' && registerName.trim().length >= 2 && (
+                <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold mt-1">
+                  ✓ Name available!
+                </p>
+              )}
+              {nameCheckStatus === 'checking' && (
+                <p className="text-[11px] text-slate-400 mt-1">Checking...</p>
+              )}
             </div>
 
             <div>

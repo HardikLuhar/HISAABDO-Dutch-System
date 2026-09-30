@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
-import { GroupCategory, CurrencyCode } from '../types';
+import React, { useState, useEffect, useRef } from 'react';
+import { GroupCategory, CurrencyCode, User } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import { api } from '../services/api';
 import { GROUP_CATEGORIES } from '../utils/formatters';
-import { X, Users, Plus, Trash2 } from 'lucide-react';
+import { X, Users, Plus, Trash2, Search, UserPlus, Check } from 'lucide-react';
 
 interface CreateGroupModalProps {
   isOpen: boolean;
@@ -27,6 +27,25 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
   const [memberNames, setMemberNames] = useState<string[]>(['']);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Autocomplete state per member field
+  const [activeSuggestionIdx, setActiveSuggestionIdx] = useState<number | null>(null);
+  const [suggestions, setSuggestions] = useState<User[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
+
+  // Close suggestions on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (suggestionsRef.current && !suggestionsRef.current.contains(e.target as Node)) {
+        setActiveSuggestionIdx(null);
+        setSuggestions([]);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   if (!isOpen) return null;
 
   const handleAddMemberField = () => {
@@ -37,10 +56,54 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
     const updated = [...memberNames];
     updated[index] = val;
     setMemberNames(updated);
+
+    // Trigger autocomplete search
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    const query = val.trim();
+    if (!query) {
+      setSuggestions([]);
+      setActiveSuggestionIdx(null);
+      return;
+    }
+
+    setActiveSuggestionIdx(index);
+    searchTimeoutRef.current = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const res = await api.searchUsers(query);
+        // Filter out members already added
+        const alreadyAdded = new Set(memberNames.map(m => m.trim().toLowerCase()).filter(m => m));
+        const filtered = res.users.filter(u =>
+          !alreadyAdded.has(u.name.toLowerCase()) &&
+          u.name.toLowerCase() !== user?.name?.toLowerCase()
+        );
+        setSuggestions(filtered);
+        setActiveSuggestionIdx(filtered.length > 0 ? index : null);
+      } catch {
+        setSuggestions([]);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 250);
+  };
+
+  const handleSelectSuggestion = (index: number, selectedUser: User) => {
+    const updated = [...memberNames];
+    updated[index] = selectedUser.name;
+    setMemberNames(updated);
+    setSuggestions([]);
+    setActiveSuggestionIdx(null);
   };
 
   const handleRemoveMemberField = (index: number) => {
     setMemberNames(memberNames.filter((_, i) => i !== index));
+    if (activeSuggestionIdx === index) {
+      setActiveSuggestionIdx(null);
+      setSuggestions([]);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -60,6 +123,11 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
         defaultCurrency: currency,
         memberEmails: validNames
       });
+
+      // Show warning for skipped (unregistered) names
+      if ((res as any).warning) {
+        showToast((res as any).warning, 'warning');
+      }
 
       showToast(`Group "${name}" created successfully!`, 'success');
       onGroupCreated(res.group.id);
@@ -147,12 +215,12 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
             </div>
           </div>
 
-          {/* Initial Members Invitations */}
+          {/* Initial Members Invitations with Autocomplete */}
           <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
             <div className="flex items-center justify-between mb-2">
               <div>
                 <label className="text-xs font-bold text-slate-900 dark:text-white block">Add Members by Name</label>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400">Friends who will split expenses in this group</span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">Type to search registered users. Only existing accounts can be added.</span>
               </div>
               <button
                 type="button"
@@ -166,14 +234,53 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
 
             <div className="space-y-2">
               {memberNames.map((memName, idx) => (
-                <div key={idx} className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    placeholder="e.g. Rahul, Sneha, Alex..."
-                    value={memName}
-                    onChange={(e) => handleMemberNameChange(idx, e.target.value)}
-                    className="flex-1 p-2 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-emerald-500/20"
-                  />
+                <div key={idx} className="relative flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      placeholder="Type a name to search..."
+                      value={memName}
+                      onChange={(e) => handleMemberNameChange(idx, e.target.value)}
+                      onFocus={() => {
+                        if (memName.trim() && suggestions.length > 0) {
+                          setActiveSuggestionIdx(idx);
+                        }
+                      }}
+                      autoComplete="off"
+                      className="w-full pl-8 pr-3 p-2 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-emerald-500/20"
+                    />
+
+                    {/* Autocomplete Suggestions Dropdown */}
+                    {activeSuggestionIdx === idx && suggestions.length > 0 && (
+                      <div
+                        ref={suggestionsRef}
+                        className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 max-h-40 overflow-y-auto"
+                      >
+                        {suggestions.map((s) => (
+                          <button
+                            key={s.id}
+                            type="button"
+                            onClick={() => handleSelectSuggestion(idx, s)}
+                            className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition cursor-pointer text-left border-b border-slate-50 dark:border-slate-700/50 last:border-0"
+                          >
+                            <img
+                              src={s.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${s.name}`}
+                              alt={s.name}
+                              className="w-7 h-7 rounded-full object-cover border border-slate-200 bg-slate-50 flex-shrink-0"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="text-xs font-bold text-slate-900 dark:text-white truncate">{s.name}</div>
+                              <div className="text-[10px] text-slate-400 truncate">
+                                {s.email.includes('@hisaabdo.local') ? 'Registered user' : s.email}
+                              </div>
+                            </div>
+                            <UserPlus className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   {memberNames.length > 1 && (
                     <button
                       type="button"
@@ -187,7 +294,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
               ))}
             </div>
             <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
-              You can also add more members anytime from inside the group.
+              You can also add more members anytime from inside the group. Only registered users will be added.
             </p>
           </div>
 

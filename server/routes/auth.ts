@@ -93,7 +93,15 @@ authRouter.post('/quick-start', async (req, res) => {
         });
       }
     } else {
-      // Create brand new account
+      // Create brand new account — enforce unique name
+      const nameTaken = await db.isNameTaken(trimmedName);
+      if (nameTaken) {
+        return res.status(400).json({
+          error: `The name "${trimmedName}" is already taken. Please add a number or variation to make it unique (e.g. "${trimmedName}1", "${trimmedName}_2").`,
+          nameTaken: true
+        });
+      }
+
       const id = `usr_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
       const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(trimmedName)}`;
       const userEmail = cleanEmail || `${trimmedName.toLowerCase().replace(/[^a-z0-9]/g, '') || 'user'}_${Math.random().toString(36).substr(2, 4)}@hisaabdo.local`;
@@ -147,6 +155,15 @@ authRouter.post('/register', async (req, res) => {
       });
       user = updated || existing;
     } else {
+      // Enforce unique name for brand-new registrations
+      const nameTaken = await db.isNameTaken(name.trim());
+      if (nameTaken) {
+        return res.status(400).json({
+          error: `The name "${name.trim()}" is already taken. Please add a number or variation to make it unique (e.g. "${name.trim()}1").`,
+          nameTaken: true
+        });
+      }
+
       const id = `usr_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
       const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`;
 
@@ -396,6 +413,40 @@ authRouter.get('/security-questions/status', requireAuth, async (req: any, res) 
     });
   } catch (err: any) {
     console.error('security questions status error:', err);
+    return res.status(500).json({ error: err.message || 'Internal server error' });
+  }
+});
+
+// Search users for autocomplete when adding members to a group
+authRouter.get('/users/search', async (req, res) => {
+  try {
+    const query = (req.query.q as string || '').trim();
+    if (!query) {
+      return res.json({ users: [] });
+    }
+    const results = await db.searchUsers(query);
+    const safeUsers = results.map(u => {
+      const { passwordHash: _, ...safeUser } = u;
+      return safeUser;
+    });
+    return res.json({ users: safeUsers });
+  } catch (err: any) {
+    console.error('search users error:', err);
+    return res.status(500).json({ error: err.message || 'Internal server error' });
+  }
+});
+
+// Check if a name is already taken
+authRouter.get('/check-name', async (req, res) => {
+  try {
+    const name = (req.query.name as string || '').trim();
+    if (!name) {
+      return res.json({ taken: false });
+    }
+    const taken = await db.isNameTaken(name);
+    return res.json({ taken });
+  } catch (err: any) {
+    console.error('check-name error:', err);
     return res.status(500).json({ error: err.message || 'Internal server error' });
   }
 });

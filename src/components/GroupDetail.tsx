@@ -1078,12 +1078,14 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
                 <h3 className="font-bold text-slate-900 text-base">Group Members ({group.members.length})</h3>
                 <p className="text-xs text-slate-500">People participating in this group's expenses</p>
               </div>
-              <button
-                onClick={() => onOpenInvite(group.id)}
-                className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-xs font-semibold border border-emerald-200 transition"
-              >
-                + Add Member
-              </button>
+              {(isAdmin || Boolean((user?.name && user.name.trim().toLowerCase() === 'hardik') || (user?.email && user.email.toLowerCase().includes('hardik')))) && (
+                <button
+                  onClick={() => onOpenInvite(group.id)}
+                  className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-xs font-semibold border border-emerald-200 transition cursor-pointer"
+                >
+                  + Add Member
+                </button>
+              )}
             </div>
 
             <div className="divide-y divide-slate-100">

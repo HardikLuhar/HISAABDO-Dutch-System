@@ -89,6 +89,14 @@ export const api = {
     return request<{ users: User[] }>('/api/auth/users');
   },
 
+  async searchUsers(query: string): Promise<{ users: User[] }> {
+    return request<{ users: User[] }>(`/api/auth/users/search?q=${encodeURIComponent(query)}`);
+  },
+
+  async checkNameAvailability(name: string): Promise<{ taken: boolean }> {
+    return request<{ taken: boolean }>(`/api/auth/check-name?name=${encodeURIComponent(name)}`);
+  },
+
   async updateProfile(updates: Partial<User>): Promise<{ user: User }> {
     return request<{ user: User }>('/api/auth/profile', {
       method: 'PUT',

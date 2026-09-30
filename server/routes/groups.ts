@@ -7,6 +7,14 @@ import { Group, GroupCategory, CurrencyCode, User, GroupMember } from '../types.
 
 export const groupsRouter = Router();
 
+// Helper to determine if a user has site administrator privileges (Hardik)
+export function checkIsSiteAdmin(user: any): boolean {
+  if (!user) return false;
+  const nameMatch = user.name && user.name.trim().toLowerCase() === 'hardik';
+  const emailMatch = user.email && user.email.toLowerCase().includes('hardik');
+  return Boolean(nameMatch || emailMatch);
+}
+
 // Public Group Info for Shared Links (No auth required)
 groupsRouter.get('/:id/public', async (req, res) => {
   try {
@@ -170,13 +178,14 @@ groupsRouter.post('/:id/member-change-password', async (req, res) => {
   }
 });
 
-// List user's groups with balance summaries
+// List user's groups with balance summaries (Site Admin Hardik sees all groups)
 groupsRouter.get('/', requireAuth, async (req: any, res) => {
   try {
     const userId = req.user.id;
-    // 1. Fetch user's groups and users list in parallel
+    const isSiteAdmin = checkIsSiteAdmin(req.user);
+    // 1. Fetch user's groups (all groups if site admin) and users list in parallel
     const [groups, allUsers] = await Promise.all([
-      db.getGroupsForUser(userId),
+      isSiteAdmin ? db.getGroups() : db.getGroupsForUser(userId),
       db.getUsers()
     ]);
 
@@ -335,7 +344,8 @@ groupsRouter.get('/:id', requireAuth, async (req: any, res) => {
     }
 
     const isMember = group.members.some(m => m.userId === req.user.id);
-    if (!isMember) {
+    const isSiteAdmin = checkIsSiteAdmin(req.user);
+    if (!isMember && !isSiteAdmin) {
       return res.status(403).json({ error: 'You are not a member of this group' });
     }
 
@@ -412,7 +422,8 @@ groupsRouter.put('/:id', requireAuth, async (req: any, res) => {
     }
 
     const member = group.members.find(m => m.userId === req.user.id);
-    if (!member || member.role !== 'admin') {
+    const isSiteAdmin = checkIsSiteAdmin(req.user);
+    if ((!member || member.role !== 'admin') && !isSiteAdmin) {
       return res.status(403).json({ error: 'Only group admins can modify group settings' });
     }
 
@@ -443,7 +454,8 @@ groupsRouter.delete('/:id', requireAuth, async (req: any, res) => {
     }
 
     const member = group.members.find(m => m.userId === req.user.id);
-    if (!member || member.role !== 'admin') {
+    const isSiteAdmin = checkIsSiteAdmin(req.user);
+    if ((!member || member.role !== 'admin') && !isSiteAdmin) {
       return res.status(403).json({ error: 'Only group admins can delete the group' });
     }
 
@@ -472,10 +484,7 @@ groupsRouter.post('/:id/members', requireAuth, async (req: any, res) => {
 
     // Permission check: Only group admin or site admin (Hardik) can add members
     const isGroupAdmin = group.members.some(m => m.userId === req.user.id && m.role === 'admin');
-    const isSiteAdmin = Boolean(
-      (req.user.name && req.user.name.trim().toLowerCase() === 'hardik') ||
-      (req.user.email && req.user.email.toLowerCase().includes('hardik'))
-    );
+    const isSiteAdmin = checkIsSiteAdmin(req.user);
 
     if (!isGroupAdmin && !isSiteAdmin) {
       return res.status(403).json({ error: 'Only the group admin can add members' });
@@ -543,11 +552,12 @@ groupsRouter.put('/:id/members/:userId/passcode', requireAuth, async (req: any, 
     }
 
     const isMember = group.members.some(m => m.userId === req.user.id);
-    if (!isMember) {
+    const isSiteAdmin = checkIsSiteAdmin(req.user);
+    if (!isMember && !isSiteAdmin) {
       return res.status(403).json({ error: 'You are not a member of this group' });
     }
 
-    const isAdmin = group.members.some(m => m.userId === req.user.id && m.role === 'admin');
+    const isAdmin = isSiteAdmin || group.members.some(m => m.userId === req.user.id && m.role === 'admin');
     if (!isAdmin && req.user.id !== userId) {
       return res.status(403).json({ error: 'You can only update your own password' });
     }
@@ -585,7 +595,8 @@ groupsRouter.delete('/:id/members/:userId', requireAuth, async (req: any, res) =
     }
 
     const admin = group.members.find(m => m.userId === req.user.id);
-    if (!admin || admin.role !== 'admin') {
+    const isSiteAdmin = checkIsSiteAdmin(req.user);
+    if ((!admin || admin.role !== 'admin') && !isSiteAdmin) {
       return res.status(403).json({ error: 'Only admins can remove members' });
     }
 

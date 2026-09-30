@@ -135,7 +135,9 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
 
   const group = groupData.group;
   const currency = group.defaultCurrency;
-  const isAdmin = group.members.some(m => m.userId === user?.id && m.role === 'admin');
+  const isHardik = Boolean((user?.name && user.name.trim().toLowerCase() === 'hardik') || (user?.email && user.email.toLowerCase().includes('hardik')));
+  const isEnrolledMember = group.members.some(m => m.userId === user?.id);
+  const isAdmin = isHardik || group.members.some(m => m.userId === user?.id && m.role === 'admin');
 
   // Map of userId -> name for fast lookup
   const userMap = useMemo(() => {
@@ -345,6 +347,11 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
                 <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800">
                   {group.defaultCurrency}
                 </span>
+                {isHardik && !isEnrolledMember && (
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1 shadow-sm">
+                    🛡️ Site Admin View
+                  </span>
+                )}
               </div>
               <p className="text-xs text-slate-500 mt-1 max-w-xl">
                 {group.description || 'Shared expense tracking & bill splitting group'}
@@ -385,9 +392,17 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
           <div>
             <span className="text-slate-400 font-medium">Your Group Balance</span>
             <div className={`text-base font-bold mt-0.5 ${
-              groupData.myNet > 0.01 ? 'text-emerald-600' : groupData.myNet < -0.01 ? 'text-rose-600' : 'text-slate-700'
+              !isEnrolledMember && isHardik
+                ? 'text-indigo-600'
+                : groupData.myNet > 0.01
+                ? 'text-emerald-600'
+                : groupData.myNet < -0.01
+                ? 'text-rose-600'
+                : 'text-slate-700'
             }`}>
-              {groupData.myNet > 0.01
+              {!isEnrolledMember && isHardik
+                ? 'Site Admin (Non-member)'
+                : groupData.myNet > 0.01
                 ? `You are owed ${formatCurrency(groupData.myNet, currency)}`
                 : groupData.myNet < -0.01
                 ? `You owe ${formatCurrency(Math.abs(groupData.myNet), currency)}`

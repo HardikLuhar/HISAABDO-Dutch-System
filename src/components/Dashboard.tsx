@@ -51,6 +51,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [activitySearch, setActivitySearch] = useState('');
 
   const currency = user?.preferredCurrency || 'INR';
+  const isHardik = Boolean((user?.name && user.name.trim().toLowerCase() === 'hardik') || (user?.email && user.email.toLowerCase().includes('hardik')));
 
   // Calculate global summary across all groups
   let totalYouAreOwed = 0;
@@ -184,6 +185,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
             {filteredGroups.map((group) => {
               const catMeta = GROUP_CATEGORIES.find(c => c.id === group.category) || { icon: '📁', label: group.category };
+              const isEnrolled = group.members.some(m => m.userId === user?.id);
               return (
                 <div
                   key={group.id}
@@ -197,9 +199,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         {catMeta.icon}
                       </div>
                       <div>
-                        <h3 className="font-bold text-slate-900 dark:text-white text-base group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition truncate max-w-[170px]">
-                          {group.name}
-                        </h3>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-bold text-slate-900 dark:text-white text-base group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition truncate max-w-[170px]">
+                            {group.name}
+                          </h3>
+                          {isHardik && !isEnrolled && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 shrink-0">
+                              Site Admin
+                            </span>
+                          )}
+                        </div>
                         <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">{catMeta.label}</span>
                       </div>
                     </div>
@@ -234,13 +243,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     <div className="text-right">
                       <div className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">Your balance</div>
                       <div className={`text-xs font-bold ${
-                        group.userBalance > 0.01
+                        isHardik && !isEnrolled
+                          ? 'text-indigo-600 dark:text-indigo-400'
+                          : group.userBalance > 0.01
                           ? 'text-emerald-600 dark:text-emerald-400'
                           : group.userBalance < -0.01
                           ? 'text-rose-600 dark:text-rose-400'
                           : 'text-slate-500 dark:text-slate-400'
                       }`}>
-                        {group.userBalance > 0.01
+                        {isHardik && !isEnrolled
+                          ? 'Site Admin'
+                          : group.userBalance > 0.01
                           ? `Owed ${formatCurrency(group.userBalance, group.defaultCurrency)}`
                           : group.userBalance < -0.01
                           ? `You owe ${formatCurrency(Math.abs(group.userBalance), group.defaultCurrency)}`
@@ -627,6 +640,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {filteredGroups.map((group) => {
                 const catMeta = GROUP_CATEGORIES.find(c => c.id === group.category) || { icon: '📁', label: group.category };
+                const isEnrolled = group.members.some(m => m.userId === user?.id);
                 return (
                   <div
                     key={group.id}
@@ -644,6 +658,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
                             <h3 className="font-bold text-slate-900 dark:text-white text-base group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition truncate max-w-[150px]">
                               {group.name}
                             </h3>
+                            {isHardik && !isEnrolled && (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 shrink-0">
+                                Site Admin
+                              </span>
+                            )}
                           </div>
                           <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">{catMeta.label}</span>
                         </div>
@@ -679,13 +698,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       <div className="text-right">
                         <div className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">Your balance</div>
                         <div className={`text-xs font-bold ${
-                          group.userBalance > 0.01
+                          isHardik && !isEnrolled
+                            ? 'text-indigo-600 dark:text-indigo-400'
+                            : group.userBalance > 0.01
                             ? 'text-emerald-600 dark:text-emerald-400'
                             : group.userBalance < -0.01
                             ? 'text-rose-600 dark:text-rose-400'
                             : 'text-slate-500 dark:text-slate-400'
                         }`}>
-                          {group.userBalance > 0.01
+                          {isHardik && !isEnrolled
+                            ? 'Site Admin'
+                            : group.userBalance > 0.01
                             ? `Owed ${formatCurrency(group.userBalance, group.defaultCurrency)}`
                             : group.userBalance < -0.01
                             ? `You owe ${formatCurrency(Math.abs(group.userBalance), group.defaultCurrency)}`

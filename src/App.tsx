@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { NotificationProvider, useNotification } from './context/NotificationContext';
@@ -21,6 +21,25 @@ import { AuthView } from './components/AuthView';
 import { GroupPortalModal } from './components/GroupPortalModal';
 import { BottomNav } from './components/BottomNav';
 import { Loader2 } from 'lucide-react';
+
+// ─── URL Helpers ───────────────────────────────────────────────────────────────
+// Read a query-param from the current URL without triggering navigation.
+function getUrlParam(key: string): string | null {
+  return new URLSearchParams(window.location.search).get(key);
+}
+
+// Silently update the URL query-params (no page reload).
+function setUrlParams(updates: Record<string, string | null>) {
+  const url = new URL(window.location.href);
+  for (const [k, v] of Object.entries(updates)) {
+    if (v === null || v === undefined || v === '') {
+      url.searchParams.delete(k);
+    } else {
+      url.searchParams.set(k, v);
+    }
+  }
+  window.history.replaceState(null, '', url.toString());
+}
 
 function HisaabdoMain() {
   const { user, isLoading: authLoading } = useAuth();
@@ -59,14 +78,33 @@ function HisaabdoMain() {
     }
   });
 
-  // Group Detail View state
-  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  // Group Detail View state — restore from URL on mount
+  const [selectedGroupId, setSelectedGroupIdRaw] = useState<string | null>(() => getUrlParam('group'));
   const [selectedGroupCalculation, setSelectedGroupCalculation] = useState<GroupCalculationData | null>(null);
   const [groupExpenses, setGroupExpenses] = useState<ExpenseItem[]>([]);
   const [groupSettlements, setGroupSettlements] = useState<SettlementItem[]>([]);
+  const [isGroupLoading, setIsGroupLoading] = useState(false);
 
-  // Mobile navigation tab
-  const [mobileTab, setMobileTab] = useState<'home' | 'groups' | 'activity' | 'profile'>('home');
+  // In-memory cache for group details so switching groups is instant
+  const groupDetailCache = useRef<Map<string, { calc: GroupCalculationData; expenses: ExpenseItem[]; settlements: SettlementItem[]; ts: number }>>(new Map());
+  const CACHE_TTL = 60_000; // 1 minute — serve stale, revalidate in background
+
+  // Mobile navigation tab — restore from URL on mount
+  const [mobileTab, setMobileTabRaw] = useState<'home' | 'groups' | 'activity' | 'profile'>(() => {
+    const t = getUrlParam('tab');
+    return (t === 'groups' || t === 'activity' || t === 'profile') ? t : 'home';
+  });
+
+  // Wrappers that sync state → URL
+  const setSelectedGroupId = useCallback((id: string | null) => {
+    setSelectedGroupIdRaw(id);
+    setUrlParams({ group: id, tab: null }); // clear tab when viewing a group
+  }, []);
+
+  const setMobileTab = useCallback((tab: 'home' | 'groups' | 'activity' | 'profile') => {
+    setMobileTabRaw(tab);
+    setUrlParams({ tab: tab === 'home' ? null : tab });
+  }, []);
 
   // Modal visibility states
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
@@ -140,37 +178,68 @@ function HisaabdoMain() {
     }
   }, []);
 
-  // Load single group details
-  const loadGroupDetails = useCallback(async (groupId: string) => {
+  // Load single group details with cache-first strategy
+  const loadGroupDetails = useCallback(async (groupId: string, forceRefresh = false) => {
+    // 1. Serve from cache instantly if available
+    const cached = groupDetailCache.current.get(groupId);
+    if (cached && !forceRefresh) {
+      setSelectedGroupCalculation(cached.calc);
+      setGroupExpenses(cached.expenses);
+      setGroupSettlements(cached.settlements);
+      // If cache is still fresh, skip network entirely
+      if (Date.now() - cached.ts < CACHE_TTL) return;
+      // Otherwise revalidate in background (stale-while-revalidate)
+    }
+
+    // 2. Show loading skeleton only if no cache at all
+    if (!cached) setIsGroupLoading(true);
+
     try {
       const [calcData, expData, settsData] = await Promise.all([
         api.getGroupDetail(groupId),
         api.getExpenses(groupId),
         api.getSettlements(groupId)
       ]);
+      // Update cache
+      groupDetailCache.current.set(groupId, {
+        calc: calcData,
+        expenses: expData,
+        settlements: settsData,
+        ts: Date.now()
+      });
       setSelectedGroupCalculation(calcData);
       setGroupExpenses(expData);
       setGroupSettlements(settsData);
     } catch (err: any) {
-      showToast(err.message || 'Failed to load group details', 'error');
-      setSelectedGroupId(null);
+      if (!cached) {
+        showToast(err.message || 'Failed to load group details', 'error');
+        setSelectedGroupId(null);
+      }
+    } finally {
+      setIsGroupLoading(false);
     }
-  }, [showToast]);
+  }, [showToast, setSelectedGroupId]);
 
   // Refresh when user changes or initially
+  const prevUser = useRef<string | null>(null);
   useEffect(() => {
     if (user) {
-      loadDashboardData();
+      // Only reload dashboard data when user actually changes, not on every selectedGroupId change
+      if (prevUser.current !== user.id) {
+        prevUser.current = user.id;
+        loadDashboardData();
+      }
       if (selectedGroupId) {
         loadGroupDetails(selectedGroupId);
       }
     } else {
+      prevUser.current = null;
       setGroups([]);
       setActivities([]);
       setSelectedGroupId(null);
       setIsLoadingData(false);
     }
-  }, [user, loadDashboardData, selectedGroupId, loadGroupDetails]);
+  }, [user, loadDashboardData, selectedGroupId, loadGroupDetails, setSelectedGroupId]);
 
   // Check if user needs to set up security questions (show popup once after login)
   useEffect(() => {
@@ -187,17 +256,23 @@ function HisaabdoMain() {
     }
   }, [user]);
 
-  // Check URL query parameters on initial mount (e.g. ?group=grp_123 or ?code=GOA2026)
+  // Check URL query parameters on initial mount (e.g. ?group=grp_123&member=... or ?code=GOA2026)
+  // Note: Plain ?group=id (without member/pass) is our internal URL-sync — already restored via initial state.
+  // Portal links have extra params like member, pass, joinGroup, or action.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const groupParam = params.get('group') || params.get('joinGroup');
+    const joinGroupParam = params.get('joinGroup');
+    const groupParam = params.get('group');
     const memberParam = params.get('member') || undefined;
     const passParam = params.get('pass') || undefined;
     const actionParam = params.get('action');
     const code = params.get('code');
 
-    if (groupParam) {
-      setPortalGroupId(groupParam);
+    // Only trigger portal flow for invite/member links (with member/pass/action params)
+    const isPortalLink = joinGroupParam || (groupParam && (memberParam || passParam || actionParam));
+    if (isPortalLink) {
+      const targetGroup = joinGroupParam || groupParam!;
+      setPortalGroupId(targetGroup);
       setPortalMemberId(memberParam);
       setPortalPasscode(passParam);
       setPortalAutoExpense(actionParam === 'add-expense' || true);
@@ -212,7 +287,7 @@ function HisaabdoMain() {
           console.warn('Auto-join code error:', err);
         });
     }
-  }, [loadDashboardData, showToast]);
+  }, [loadDashboardData, showToast, setSelectedGroupId]);
 
   // Auto-open group if user is already logged in as member of portal group
   useEffect(() => {
@@ -243,17 +318,30 @@ function HisaabdoMain() {
     }
   };
 
-  // Handle opening group
+  // Handle opening group — instant switch with cache, revalidate in background
   const handleSelectGroup = (groupId: string) => {
     setSelectedGroupId(groupId);
-    loadGroupDetails(groupId);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    loadGroupDetails(groupId); // cache-first, instant if cached
+    window.scrollTo({ top: 0 });
   };
+
+  // ─── Non-blocking refresh helper ──────────────────────────────────────────
+  // Fire both dashboard + group refreshes in parallel without awaiting
+  const refreshAll = useCallback((groupId?: string | null) => {
+    loadDashboardData();
+    const gid = groupId ?? selectedGroupId;
+    if (gid) {
+      // Invalidate cache so we fetch fresh data
+      groupDetailCache.current.delete(gid);
+      loadGroupDetails(gid, true);
+    }
+  }, [loadDashboardData, loadGroupDetails, selectedGroupId]);
 
   // Handle deleting group
   const handleDeleteGroup = async (groupId: string) => {
     try {
       await api.deleteGroup(groupId);
+      groupDetailCache.current.delete(groupId);
       showToast('Group deleted', 'success');
       setSelectedGroupId(null);
       loadDashboardData();
@@ -265,15 +353,13 @@ function HisaabdoMain() {
   // Handle updating group
   const handleUpdateGroup = async (groupId: string, data: any) => {
     await api.updateGroup(groupId, data);
-    loadDashboardData();
-    loadGroupDetails(groupId);
+    refreshAll(groupId);
   };
 
   // Handle removing member
   const handleRemoveMember = async (groupId: string, userId: string) => {
     await api.removeMember(groupId, userId);
-    loadDashboardData();
-    loadGroupDetails(groupId);
+    refreshAll(groupId);
   };
 
   // Open modals
@@ -328,19 +414,13 @@ function HisaabdoMain() {
     setIsReminderOpen(true);
   };
 
-  // Handlers after actions complete
+  // Handlers after actions complete — non-blocking parallel refresh
   const handleExpenseAdded = () => {
-    loadDashboardData();
-    if (selectedGroupId) {
-      loadGroupDetails(selectedGroupId);
-    }
+    refreshAll();
   };
 
   const handleSettlementRecorded = () => {
-    loadDashboardData();
-    if (selectedGroupId) {
-      loadGroupDetails(selectedGroupId);
-    }
+    refreshAll();
   };
 
   if (authLoading && !user) {
@@ -388,7 +468,7 @@ function HisaabdoMain() {
     );
   }
 
-  if (isLoadingData && groups.length === 0) {
+  if (isLoadingData && groups.length === 0 && !selectedGroupId) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-4 transition-colors">
         <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-lg shadow-emerald-600/30 animate-bounce mb-4">
@@ -432,7 +512,13 @@ function HisaabdoMain() {
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-24 md:pb-12">
-        {selectedGroupId && selectedGroupCalculation ? (
+        {selectedGroupId && isGroupLoading && !selectedGroupCalculation ? (
+          /* Lightweight skeleton while first-loading a group with no cache */
+          <div className="flex flex-col items-center justify-center py-24 gap-3">
+            <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+            <p className="text-sm text-slate-500 dark:text-slate-400">Loading group…</p>
+          </div>
+        ) : selectedGroupId && selectedGroupCalculation ? (
           <GroupDetailView
             groupData={selectedGroupCalculation}
             expenses={groupExpenses}
@@ -445,7 +531,7 @@ function HisaabdoMain() {
             onOpenInvite={handleOpenInvite}
             onOpenExpenseDetail={handleOpenExpenseDetail}
             onOpenSendReminder={handleOpenSendReminder}
-            onRefresh={() => loadGroupDetails(selectedGroupId)}
+            onRefresh={() => loadGroupDetails(selectedGroupId, true)}
             onDeleteGroup={handleDeleteGroup}
             onUpdateGroup={handleUpdateGroup}
             onRemoveMember={handleRemoveMember}
@@ -526,7 +612,7 @@ function HisaabdoMain() {
         isOpen={isCreateGroupOpen}
         onClose={() => setIsCreateGroupOpen(false)}
         onGroupCreated={(newGroupId) => {
-          loadDashboardData();
+          refreshAll(newGroupId);
           handleSelectGroup(newGroupId);
         }}
       />
@@ -539,10 +625,7 @@ function HisaabdoMain() {
         groupName={currentInviteGroup?.name || 'Group'}
         inviteCode={currentInviteGroup?.inviteCode || ''}
         members={inviteGroupMembers}
-        onMemberAdded={() => {
-          loadDashboardData();
-          if (selectedGroupId) loadGroupDetails(selectedGroupId);
-        }}
+        onMemberAdded={() => refreshAll()}
       />
 
       {/* 6. Join Group with Code Modal */}
@@ -550,7 +633,7 @@ function HisaabdoMain() {
         isOpen={isJoinGroupOpen}
         onClose={() => setIsJoinGroupOpen(false)}
         onJoined={(groupId) => {
-          loadDashboardData();
+          refreshAll(groupId);
           handleSelectGroup(groupId);
         }}
       />

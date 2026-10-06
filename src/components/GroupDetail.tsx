@@ -371,7 +371,7 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
             </button>
             <button
               onClick={() => onOpenSettleUp(group.id)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs sm:text-sm shadow-sm transition cursor-pointer"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 dark:bg-slate-700 hover:bg-slate-800 dark:hover:bg-slate-600 text-white font-semibold text-xs sm:text-sm shadow-sm transition cursor-pointer"
               id="group-settle-up-cta"
             >
               <CheckCircle2 className="w-4 h-4 text-emerald-400" />
@@ -731,23 +731,23 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
 
           {/* Unsimplified Comparison View (Section 9 Before Simplification) */}
           {showUnsimplified && (
-            <div className="bg-amber-50/70 border border-amber-200 rounded-2xl p-5 space-y-3">
+            <div className="bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 rounded-2xl p-5 space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-amber-900">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-amber-300">
                     Before Simplification (Raw Pairwise Debts: {groupData.debtSimplification.unsimplifiedCount} Transfers)
                   </h3>
-                  <p className="text-[11px] text-amber-700">These are all individual debts resulting directly from each bill split</p>
+                  <p className="text-[11px] text-amber-700 dark:text-amber-400">These are all individual debts resulting directly from each bill split</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                 {groupData.debtSimplification.unsimplified.map((debt, idx) => (
-                  <div key={idx} className="bg-white p-3 rounded-xl border border-amber-200 text-xs flex items-center justify-between">
-                    <span className="text-slate-800 font-medium">
-                      <strong className="text-slate-900">{debt.fromName}</strong> owes <strong className="text-slate-900">{debt.toName}</strong>
+                  <div key={idx} className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-amber-200 dark:border-amber-900/40 text-xs flex items-center justify-between">
+                    <span className="text-slate-800 dark:text-slate-200 font-medium">
+                      <strong className="text-slate-900 dark:text-white">{debt.fromName}</strong> owes <strong className="text-slate-900 dark:text-white">{debt.toName}</strong>
                     </span>
-                    <span className="font-bold text-amber-800">{formatCurrency(debt.amount, currency)}</span>
+                    <span className="font-bold text-amber-800 dark:text-amber-400">{formatCurrency(debt.amount, currency)}</span>
                   </div>
                 ))}
               </div>
@@ -1308,9 +1308,9 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
 
             {/* Delete Group Card (Admin only) */}
             {isAdmin && (
-              <div className="bg-rose-50/70 border border-rose-200 rounded-2xl p-5 text-xs space-y-2">
-                <h4 className="font-bold text-rose-900">Danger Zone</h4>
-                <p className="text-rose-700 leading-snug">
+              <div className="bg-rose-50/70 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/40 rounded-2xl p-5 text-xs space-y-2">
+                <h4 className="font-bold text-rose-900 dark:text-rose-300">Danger Zone</h4>
+                <p className="text-rose-700 dark:text-rose-400 leading-snug">
                   Deleting this group permanently removes all recorded expenses, settlements, and member calculations.
                 </p>
                 <button

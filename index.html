@@ -9,6 +9,22 @@
     <meta property="og:description" content="Hisaabdo - Group Expense & Bill Splitting platform to manage group expenses, split bills fairly, and settle balances effortlessly." />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="theme-color" content="#f8fafc" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#020617" media="(prefers-color-scheme: dark)" />
+    <style>
+      /* Prevent white flash on dark-mode page load */
+      html.dark { background-color: #020617; }
+      html:not(.dark) { background-color: #f8fafc; }
+    </style>
+    <script>
+      // Apply dark class instantly before CSS/React loads to prevent flash
+      try {
+        if (localStorage.getItem('hisaabdo_theme') === 'dark') {
+          document.documentElement.classList.add('dark');
+          document.documentElement.style.colorScheme = 'dark';
+        }
+      } catch(e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -261,7 +261,7 @@ export const GroupPortalModal: React.FC<GroupPortalModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/65 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
-      <div className="bg-white rounded-t-2xl sm:rounded-3xl w-full sm:max-w-md shadow-2xl border border-slate-200 overflow-hidden max-h-[95vh] flex flex-col">
+      <div className="bg-white dark:bg-slate-900 rounded-t-2xl sm:rounded-3xl w-full sm:max-w-md shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden max-h-[95vh] flex flex-col">
         {/* Header */}
         <div className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950 p-6 text-white text-center">
           <button
@@ -306,18 +306,18 @@ export const GroupPortalModal: React.FC<GroupPortalModalProps> = ({
         ) : viewMode === 'set-password-prompt' && authenticatedUser ? (
           /* PROMPT: After password entry, let them easily customize their password permanently */
           <form onSubmit={handleSaveCustomPasswordFromPrompt} className="p-6 space-y-4">
-            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3.5 text-xs text-emerald-800 flex items-start gap-2.5">
-              <ShieldCheck className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+            <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-2xl p-3.5 text-xs text-emerald-800 dark:text-emerald-300 flex items-start gap-2.5">
+              <ShieldCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
               <div>
                 <span className="font-bold">Welcome, {authenticatedUser.name}!</span>
-                <p className="text-[11px] text-emerald-700 mt-0.5 leading-relaxed">
+                <p className="text-[11px] text-emerald-700 dark:text-emerald-400 mt-0.5 leading-relaxed">
                   Would you like to set your own password now? You can choose any easy code so you never have to look up the temporary invitation link again!
                 </p>
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-800 mb-1.5">
+              <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5">
                 New Personal Password
               </label>
               <div className="relative">
@@ -329,12 +329,12 @@ export const GroupPortalModal: React.FC<GroupPortalModalProps> = ({
                   onChange={(e) => setNewPasscode(e.target.value)}
                   autoFocus
                   required
-                  className="w-full pl-9 pr-10 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-mono font-bold tracking-wider"
+                  className="w-full pl-9 pr-10 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-mono font-bold tracking-wider text-slate-900 dark:text-white"
                 />
                 <button
                   type="button"
                   onClick={() => setShowNewPasscode(!showNewPasscode)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-0.5 cursor-pointer"
                 >
                   {showNewPasscode ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -342,7 +342,7 @@ export const GroupPortalModal: React.FC<GroupPortalModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-800 mb-1.5">
+              <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5">
                 Confirm New Password
               </label>
               <div className="relative">
@@ -353,7 +353,7 @@ export const GroupPortalModal: React.FC<GroupPortalModalProps> = ({
                   value={confirmNewPasscode}
                   onChange={(e) => setConfirmNewPasscode(e.target.value)}
                   required
-                  className="w-full pl-9 pr-10 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-mono font-bold tracking-wider"
+                  className="w-full pl-9 pr-10 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-mono font-bold tracking-wider text-slate-900 dark:text-white"
                 />
               </div>
             </div>
@@ -377,7 +377,7 @@ export const GroupPortalModal: React.FC<GroupPortalModalProps> = ({
               <button
                 type="button"
                 onClick={handleSkipPasswordCustomization}
-                className="w-full py-2 px-3 text-xs text-slate-500 hover:text-slate-800 font-medium rounded-xl hover:bg-slate-100 transition cursor-pointer text-center"
+                className="w-full py-2 px-3 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white font-medium rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer text-center"
               >
                 Skip & Keep Current Password ({authenticatedUser.passcode})
               </button>
@@ -387,14 +387,14 @@ export const GroupPortalModal: React.FC<GroupPortalModalProps> = ({
           /* DIRECT CHANGE PASSWORD MODE */
           <form onSubmit={handleChangePasswordSubmit} className="p-6 space-y-4">
             <div>
-              <label className="block text-xs font-bold text-slate-800 mb-1.5 flex items-center justify-between">
+              <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5 flex items-center justify-between">
                 <span>1. Select Your Name</span>
                 <span className="text-[11px] text-slate-400 font-normal">
                   {group?.members.length} members
                 </span>
               </label>
 
-              <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-1 bg-slate-50 rounded-2xl border border-slate-200">
+              <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-1 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700">
                 {group?.members.map(m => {
                   const isSelected = selectedUserId === m.userId;
                   return (
@@ -404,14 +404,14 @@ export const GroupPortalModal: React.FC<GroupPortalModalProps> = ({
                       onClick={() => setSelectedUserId(m.userId)}
                       className={`flex items-center gap-2 p-2 rounded-xl text-left text-xs transition border cursor-pointer ${
                         isSelected
-                          ? 'bg-emerald-50 border-emerald-500 text-emerald-950 font-bold shadow-xs'
-                          : 'bg-white border-slate-200/80 text-slate-700 hover:border-slate-300'
+                          ? 'bg-emerald-50 dark:bg-emerald-950/50 border-emerald-500 text-emerald-950 dark:text-emerald-200 font-bold shadow-xs'
+                          : 'bg-white dark:bg-slate-800 border-slate-200/80 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600'
                       }`}
                     >
                       <img
                         src={m.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${m.name}`}
                         alt={m.name}
-                        className="w-6 h-6 rounded-full object-cover bg-slate-100 flex-shrink-0"
+                        className="w-6 h-6 rounded-full object-cover bg-slate-100 dark:bg-slate-700 flex-shrink-0"
                       />
                       <span className="truncate text-xs">{m.name}</span>
                     </button>
@@ -421,7 +421,7 @@ export const GroupPortalModal: React.FC<GroupPortalModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-800 mb-1">
+              <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                 2. Current / Temporary Password
               </label>
               <div className="relative">
@@ -432,14 +432,14 @@ export const GroupPortalModal: React.FC<GroupPortalModalProps> = ({
                   value={currentPasscodeForChange}
                   onChange={(e) => setCurrentPasscodeForChange(e.target.value)}
                   required
-                  className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-mono font-bold"
+                  className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-mono font-bold text-slate-900 dark:text-white"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-bold text-slate-800 mb-1">
+                <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                   3. New Password
                 </label>
                 <input
@@ -448,11 +448,11 @@ export const GroupPortalModal: React.FC<GroupPortalModalProps> = ({
                   value={newPasscode}
                   onChange={(e) => setNewPasscode(e.target.value)}
                   required
-                  className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-mono font-bold"
+                  className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-mono font-bold text-slate-900 dark:text-white"
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-800 mb-1">
+                <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                   Confirm Password
                 </label>
                 <input
@@ -461,12 +461,12 @@ export const GroupPortalModal: React.FC<GroupPortalModalProps> = ({
                   value={confirmNewPasscode}
                   onChange={(e) => setConfirmNewPasscode(e.target.value)}
                   required
-                  className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-mono font-bold"
+                  className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-mono font-bold text-slate-900 dark:text-white"
                 />
               </div>
             </div>
 
-            <div className="flex items-center justify-between text-[11px] text-slate-500">
+            <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
               <label className="flex items-center gap-1.5 cursor-pointer">
                 <input
                   type="checkbox"
@@ -480,7 +480,7 @@ export const GroupPortalModal: React.FC<GroupPortalModalProps> = ({
               <button
                 type="button"
                 onClick={() => setViewMode('unlock')}
-                className="text-emerald-700 hover:text-emerald-800 font-semibold cursor-pointer"
+                className="text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 font-semibold cursor-pointer"
               >
                 Back to Normal Login
               </button>
@@ -504,18 +504,18 @@ export const GroupPortalModal: React.FC<GroupPortalModalProps> = ({
         ) : viewMode === 'join-new' ? (
           /* Join as New Member Form */
           <form onSubmit={handleJoinNewMember} className="p-6 space-y-4">
-            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3.5 text-xs text-emerald-800 flex items-start gap-2.5">
-              <Sparkles className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+            <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-2xl p-3.5 text-xs text-emerald-800 dark:text-emerald-300 flex items-start gap-2.5">
+              <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
               <div>
                 <span className="font-bold">New to this group?</span>
-                <p className="text-[11px] text-emerald-700 mt-0.5">
+                <p className="text-[11px] text-emerald-700 dark:text-emerald-400 mt-0.5">
                   Enter your name to join this group. You will then be able to set your own password!
                 </p>
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-800 mb-1.5">Your Name</label>
+              <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5">Your Name</label>
               <input
                 type="text"
                 placeholder="e.g. Priya, Karan, Alex..."
@@ -523,7 +523,7 @@ export const GroupPortalModal: React.FC<GroupPortalModalProps> = ({
                 onChange={(e) => setNewMemberName(e.target.value)}
                 autoFocus
                 required
-                className="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium"
+                className="w-full px-3.5 py-2.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium text-slate-900 dark:text-white"
               />
             </div>
 
@@ -546,7 +546,7 @@ export const GroupPortalModal: React.FC<GroupPortalModalProps> = ({
               <button
                 type="button"
                 onClick={() => setViewMode('unlock')}
-                className="text-[11px] text-slate-500 hover:text-slate-800 underline cursor-pointer"
+                className="text-[11px] text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 underline cursor-pointer"
               >
                 Already a member on the list? Enter password
               </button>
@@ -556,14 +556,14 @@ export const GroupPortalModal: React.FC<GroupPortalModalProps> = ({
           /* Existing Member Unlock Form */
           <form onSubmit={handleUnlock} className="p-6 space-y-4">
             <div>
-              <label className="block text-xs font-bold text-slate-800 mb-1.5 flex items-center justify-between">
+              <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5 flex items-center justify-between">
                 <span>1. Select Your Name</span>
                 <span className="text-[11px] text-slate-400 font-normal">
                   {group?.members.length} members
                 </span>
               </label>
 
-              <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-1 bg-slate-50 rounded-2xl border border-slate-200">
+              <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-1 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700">
                 {group?.members.map(m => {
                   const isSelected = selectedUserId === m.userId;
                   return (
@@ -575,23 +575,23 @@ export const GroupPortalModal: React.FC<GroupPortalModalProps> = ({
                       }}
                       className={`flex items-center gap-2 p-2 rounded-xl text-left text-xs transition border cursor-pointer ${
                         isSelected
-                          ? 'bg-emerald-50 border-emerald-500 text-emerald-950 font-bold shadow-xs'
-                          : 'bg-white border-slate-200/80 text-slate-700 hover:border-slate-300'
+                          ? 'bg-emerald-50 dark:bg-emerald-950/50 border-emerald-500 text-emerald-950 dark:text-emerald-200 font-bold shadow-xs'
+                          : 'bg-white dark:bg-slate-800 border-slate-200/80 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600'
                       }`}
                     >
                       <img
                         src={m.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${m.name}`}
                         alt={m.name}
-                        className="w-7 h-7 rounded-full object-cover bg-slate-100 flex-shrink-0"
+                        className="w-7 h-7 rounded-full object-cover bg-slate-100 dark:bg-slate-700 flex-shrink-0"
                       />
                       <div className="truncate flex-1">
                         <div className="truncate text-xs">{m.name}</div>
                         {m.role === 'admin' && (
-                          <div className="text-[9px] text-amber-700 font-bold">Admin</div>
+                          <div className="text-[9px] text-amber-700 dark:text-amber-400 font-bold">Admin</div>
                         )}
                       </div>
                       {isSelected && (
-                        <UserCheck className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                        <UserCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
                       )}
                     </button>
                   );
@@ -601,7 +601,7 @@ export const GroupPortalModal: React.FC<GroupPortalModalProps> = ({
 
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-bold text-slate-800">
+                <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
                   2. Enter Your Password
                 </label>
                 <button
@@ -610,7 +610,7 @@ export const GroupPortalModal: React.FC<GroupPortalModalProps> = ({
                     setCurrentPasscodeForChange(passcode);
                     setViewMode('change-password');
                   }}
-                  className="text-[11px] text-emerald-700 hover:text-emerald-800 font-semibold flex items-center gap-1 cursor-pointer"
+                  className="text-[11px] text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 font-semibold flex items-center gap-1 cursor-pointer"
                 >
                   <KeyRound className="w-3 h-3" />
                   <span>Change Password</span>
@@ -625,17 +625,17 @@ export const GroupPortalModal: React.FC<GroupPortalModalProps> = ({
                   value={passcode}
                   onChange={(e) => setPasscode(e.target.value)}
                   required
-                  className="w-full pl-9 pr-10 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-mono font-bold tracking-wider"
+                  className="w-full pl-9 pr-10 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-mono font-bold tracking-wider text-slate-900 dark:text-white"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-0.5 cursor-pointer"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
-              <p className="text-[11px] text-slate-400 mt-1">
+              <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
                 Enter the code sent to you. You can customize it to any personal password right after unlocking!
               </p>
             </div>
@@ -655,11 +655,11 @@ export const GroupPortalModal: React.FC<GroupPortalModalProps> = ({
               )}
             </button>
 
-            <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px]">
               <button
                 type="button"
                 onClick={() => setViewMode('join-new')}
-                className="text-emerald-700 hover:text-emerald-800 font-semibold flex items-center gap-1 cursor-pointer"
+                className="text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 font-semibold flex items-center gap-1 cursor-pointer"
               >
                 <PlusCircle className="w-3.5 h-3.5" />
                 <span>Not on this list? Join as new</span>
@@ -668,7 +668,7 @@ export const GroupPortalModal: React.FC<GroupPortalModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="text-slate-400 hover:text-slate-600 cursor-pointer"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer"
               >
                 Cancel
               </button>

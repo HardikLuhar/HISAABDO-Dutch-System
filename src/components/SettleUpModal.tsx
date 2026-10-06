@@ -155,7 +155,7 @@ export const SettleUpModal: React.FC<SettleUpModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-xl transition cursor-pointer"
+                className="px-5 py-2 bg-slate-800 dark:bg-slate-600 hover:bg-slate-900 dark:hover:bg-slate-500 text-white text-xs font-semibold rounded-xl transition cursor-pointer"
               >
                 Close
               </button>

@@ -568,10 +568,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </div>
 
-      {/* Main Grid: Groups & Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-8">
-        {/* Left Column (2 Cols): Groups List */}
-        <div className="lg:col-span-2 space-y-4">
+      {/* Main Groups Section */}
+      <div className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-bold text-slate-900 dark:text-white">Your Groups</h2>
@@ -637,7 +635,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredGroups.map((group) => {
                 const catMeta = GROUP_CATEGORIES.find(c => c.id === group.category) || { icon: '📁', label: group.category };
                 const isEnrolled = group.members.some(m => m.userId === user?.id);
@@ -722,63 +720,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </div>
           )}
         </div>
-
-        {/* Right Column: Recent Activity Timeline */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Recent Activity</h2>
-            {onSelectTab && (
-              <button
-                onClick={() => onSelectTab('activity')}
-                className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold hover:underline cursor-pointer flex items-center gap-1"
-              >
-                <span>View feed</span>
-                <ArrowRight className="w-3 h-3" />
-              </button>
-            )}
-          </div>
-
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 shadow-sm">
-            {activities.length === 0 ? (
-              <div className="p-6 text-center text-xs text-slate-400 dark:text-slate-500">
-                No recent activity logged yet.
-              </div>
-            ) : (
-              <div className="space-y-3.5 divide-y divide-slate-100 dark:divide-slate-800">
-                {activities.slice(0, 7).map((act) => (
-                  <div key={act.id} className="pt-3 first:pt-0 flex items-start gap-3">
-                    <img
-                      src={act.userAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${act.userName}`}
-                      alt={act.userName}
-                      className="w-8 h-8 rounded-full object-cover border border-slate-200 dark:border-slate-700 flex-shrink-0 mt-0.5"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-slate-800 dark:text-slate-200 leading-snug">
-                        <span className="font-semibold text-slate-900 dark:text-white">{act.userName}</span>{' '}
-                        {act.action === 'CREATED_EXPENSE' ? 'added' :
-                         act.action === 'RECORDED_SETTLEMENT' ? 'settled' :
-                         act.action === 'JOINED_GROUP' ? 'joined' :
-                         act.action === 'SENT_REMINDER' ? 'sent reminder' : 'updated'}{' '}
-                        <span className="text-slate-600 dark:text-slate-400 font-medium">
-                          {act.description.replace(/^.*?added |^.*?settled |^.*?joined /i, '')}
-                        </span>
-                      </p>
-                      <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 block">
-                        {new Date(act.createdAt).toLocaleDateString(undefined, {
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
     </div>
   );
 };

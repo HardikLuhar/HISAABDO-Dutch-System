@@ -214,9 +214,10 @@ expensesRouter.post('/:groupId/expenses', requireAuth, async (req: any, res) => 
       createdAt: new Date().toISOString()
     });
 
-    // 4. Send Notifications to participants (excluding the creator)
+    // 4. Send Notifications ONLY to participants who are members in this group (excluding the creator)
+    const groupMemberIds = new Set(group.members.map((m: any) => m.userId));
     for (const s of splitResult.splits) {
-      if (s.userId !== req.user.id) {
+      if (s.userId !== req.user.id && groupMemberIds.has(s.userId)) {
         await db.createNotification({
           id: `notif_${Date.now()}_${s.userId}`,
           userId: s.userId,
@@ -321,6 +322,32 @@ expensesRouter.put('/:groupId/expenses/:id', requireAuth, async (req: any, res) 
       currency: existing.currency,
       createdAt: new Date().toISOString()
     });
+
+    // Notify ONLY members of this group about the edit (excluding the editor)
+    const updateGroupMemberIds = new Set((group?.members || []).map((m: any) => m.userId));
+    const targetMemberIds = new Set<string>();
+    (newSplits || []).forEach((s: any) => {
+      if (s.userId !== req.user.id && updateGroupMemberIds.has(s.userId)) {
+        targetMemberIds.add(s.userId);
+      }
+    });
+    if (existing.createdBy !== req.user.id && updateGroupMemberIds.has(existing.createdBy)) {
+      targetMemberIds.add(existing.createdBy);
+    }
+
+    for (const targetId of targetMemberIds) {
+      await db.createNotification({
+        id: `notif_${Date.now()}_${targetId}`,
+        userId: targetId,
+        type: 'EXPENSE_EDITED',
+        title: 'Expense Updated',
+        message: `${req.user.name} updated expense "${updated?.description || existing.description}" in "${group?.name || 'group'}".`,
+        groupId,
+        relatedId: id,
+        read: false,
+        createdAt: new Date().toISOString()
+      });
+    }
 
     return res.json({ expense: updated });
   } catch (err: any) {

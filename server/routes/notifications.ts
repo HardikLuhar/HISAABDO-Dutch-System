@@ -54,7 +54,16 @@ notificationsRouter.post('/remind', requireAuth, async (req: any, res) => {
       return res.status(404).json({ error: 'Debtor not found' });
     }
 
-    const groupName = group ? group.name : 'your shared group';
+    if (!group) {
+      return res.status(404).json({ error: 'Group not found' });
+    }
+
+    const groupMemberIds = new Set(group.members.map((m: any) => m.userId));
+    if (!groupMemberIds.has(req.user.id) || !groupMemberIds.has(toUserId)) {
+      return res.status(403).json({ error: 'Only members within the group can send or receive reminders for this group' });
+    }
+
+    const groupName = group.name;
 
     // Create notification for the debtor
     const notif = await db.createNotification({
@@ -64,6 +73,13 @@ notificationsRouter.post('/remind', requireAuth, async (req: any, res) => {
       title: 'Payment Reminder',
       message: `${req.user.name} sent a friendly reminder: You owe ${currency} ${amount} in "${groupName}".`,
       groupId,
+      relatedId: JSON.stringify({
+        senderName: req.user.name,
+        senderId: req.user.id,
+        amount: Number(amount),
+        currency: currency,
+        groupName: groupName
+      }),
       read: false,
       createdAt: new Date().toISOString()
     });

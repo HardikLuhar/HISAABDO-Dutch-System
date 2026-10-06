@@ -59,7 +59,7 @@ export function createSessionToken(userId: string): string {
   const payloadStr = JSON.stringify({ u: userId, exp: expiresAt, v: 1 });
   const payloadB64 = Buffer.from(payloadStr, 'utf-8').toString('base64url');
   const signature = crypto.createHmac('sha256', SESSION_SECRET).update(payloadB64).digest('base64url');
-  
+
   const token = `${payloadB64}.${signature}`;
   legacyTokenStore.set(token, { userId, expiresAt });
   return token;

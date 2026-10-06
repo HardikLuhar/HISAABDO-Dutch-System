@@ -19,6 +19,7 @@ import { AuthModal } from './components/AuthModal';
 import { SecurityQuestionsSetupModal } from './components/SecurityQuestionsSetupModal';
 import { AuthView } from './components/AuthView';
 import { GroupPortalModal } from './components/GroupPortalModal';
+import { GunReminderOverlay } from './components/GunReminderOverlay';
 import { BottomNav } from './components/BottomNav';
 import { Loader2 } from 'lucide-react';
 
@@ -689,6 +690,16 @@ function HisaabdoMain() {
           onSuccess={handlePortalSuccess}
         />
       )}
+
+      {/* Dramatic Fullscreen Payment Reminder Popup with Guns and Sound */}
+      <GunReminderOverlay
+        onOpenSettle={({ groupId }) => {
+          if (groupId) {
+            setSelectedGroupId(groupId);
+          }
+          setIsSettleUpOpen(true);
+        }}
+      />
     </div>
   );
 }

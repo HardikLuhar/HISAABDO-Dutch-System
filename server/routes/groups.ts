@@ -320,6 +320,18 @@ groupsRouter.post('/', requireAuth, async (req: any, res) => {
       createdAt: new Date().toISOString()
     });
 
+    // Notify only the group creator / admin
+    await db.createNotification({
+      id: `notif_${Date.now()}_grp`,
+      userId: req.user.id,
+      type: 'GROUP_INVITE',
+      title: 'Group Created',
+      message: `You created group "${newGroup.name}" as admin.`,
+      groupId,
+      read: false,
+      createdAt: new Date().toISOString()
+    });
+
     const response: any = { group: newGroup };
     if (skippedNames.length > 0) {
       response.skippedNames = skippedNames;

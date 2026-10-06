@@ -69,6 +69,11 @@ settlementsRouter.post('/:groupId/settlements', requireAuth, async (req: any, re
       return res.status(400).json({ error: 'Amount must be greater than zero' });
     }
 
+    const groupMemberIds = new Set(group.members.map((m: any) => m.userId));
+    if (!groupMemberIds.has(payerId) || !groupMemberIds.has(receiverId)) {
+      return res.status(400).json({ error: 'Both payer and receiver must be members of this group' });
+    }
+
     const payer = await db.getUserById(payerId);
     const receiver = await db.getUserById(receiverId);
 
@@ -87,18 +92,24 @@ settlementsRouter.post('/:groupId/settlements', requireAuth, async (req: any, re
 
     await db.createSettlement(settlement);
 
-    // Notify receiver
-    await db.createNotification({
-      id: `notif_${Date.now()}`,
-      userId: receiverId,
-      type: 'SETTLEMENT_RECORDED',
-      title: 'Payment Received',
-      message: `${payer ? payer.name : 'Someone'} recorded a payment of ${group.defaultCurrency} ${settleAmount} to you in "${group.name}".`,
-      groupId,
-      relatedId: settlementId,
-      read: false,
-      createdAt: new Date().toISOString()
-    });
+    // Notify only the other party who belongs to this group
+    const targetUserId = req.user.id === payerId ? receiverId : payerId;
+    if (groupMemberIds.has(targetUserId)) {
+      const isPayerRecording = req.user.id === payerId;
+      await db.createNotification({
+        id: `notif_${Date.now()}`,
+        userId: targetUserId,
+        type: 'SETTLEMENT_RECORDED',
+        title: isPayerRecording ? 'Payment Recorded' : 'Payment Settled',
+        message: isPayerRecording
+          ? `${req.user.name} recorded a payment of ${group.defaultCurrency} ${settleAmount} to you in "${group.name}".`
+          : `${req.user.name} marked ${group.defaultCurrency} ${settleAmount} settled with you in "${group.name}".`,
+        groupId,
+        relatedId: settlementId,
+        read: false,
+        createdAt: new Date().toISOString()
+      });
+    }
 
     // Log activity
     await db.createActivity({

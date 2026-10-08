@@ -6,6 +6,7 @@ import { settlementsRouter } from './routes/settlements.js';
 import { analyticsRouter } from './routes/analytics.js';
 import { notificationsRouter, activityRouter } from './routes/notifications.js';
 import { ocrRouter } from './routes/ocr.js';
+import { chatRouter } from './routes/chat.js';
 
 const app = express();
 
@@ -31,6 +32,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/groups', groupsRouter);
 app.use('/api/groups', expensesRouter);
 app.use('/api/groups', settlementsRouter);
+app.use('/api/groups', chatRouter);
 app.use('/api/analytics', analyticsRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/activities', activityRouter);

@@ -31,6 +31,7 @@ interface DashboardProps {
   onOpenCreateGroup: () => void;
   onOpenSettleUp: (groupId?: string) => void;
   onOpenJoinGroup: () => void;
+  onOpenBalanceDetail?: (viewType: 'owed' | 'owe') => void;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
@@ -42,7 +43,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onOpenAddExpense,
   onOpenCreateGroup,
   onOpenSettleUp,
-  onOpenJoinGroup
+  onOpenJoinGroup,
+  onOpenBalanceDetail
 }) => {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
@@ -474,7 +476,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
       {/* Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
         {/* Total You are Owed */}
-        <div className="bg-white dark:bg-slate-900 p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md transition">
+        <button
+          onClick={() => onOpenBalanceDetail?.('owed')}
+          className="bg-white dark:bg-slate-900 p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md hover:border-emerald-300 dark:hover:border-emerald-700 transition text-left cursor-pointer group"
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">You are owed</span>
             <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 flex items-center justify-center">
@@ -486,11 +491,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
               {formatCurrency(totalYouAreOwed, currency)}
             </span>
           </div>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Friends will pay you this amount</p>
-        </div>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition">Tap to see who owes you →</p>
+        </button>
 
         {/* Total You Owe */}
-        <div className="bg-white dark:bg-slate-900 p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md transition">
+        <button
+          onClick={() => onOpenBalanceDetail?.('owe')}
+          className="bg-white dark:bg-slate-900 p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md hover:border-rose-300 dark:hover:border-rose-700 transition text-left cursor-pointer group"
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">You owe</span>
             <div className="w-8 h-8 rounded-lg bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 flex items-center justify-center">
@@ -502,8 +510,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
               {formatCurrency(totalYouOwe, currency)}
             </span>
           </div>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Amount you need to settle</p>
-        </div>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 group-hover:text-rose-600 dark:group-hover:text-rose-400 transition">Tap to see who you owe →</p>
+        </button>
 
         {/* Net Balance */}
         <div className="bg-white dark:bg-slate-900 p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md transition">

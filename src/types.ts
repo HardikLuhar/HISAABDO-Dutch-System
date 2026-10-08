@@ -181,3 +181,13 @@ export interface AnalyticsData {
   highestSpender: { userId: string; name: string; paid: number; percentage: number } | null;
   insights: string[];
 }
+
+export interface ChatMessageItem {
+  id: string;
+  groupId: string;
+  userId: string;
+  userName: string;
+  userAvatar: string;
+  message: string;
+  createdAt: string;
+}

@@ -20,6 +20,7 @@ import { SecurityQuestionsSetupModal } from './components/SecurityQuestionsSetup
 import { AuthView } from './components/AuthView';
 import { GroupPortalModal } from './components/GroupPortalModal';
 import { GunReminderOverlay } from './components/GunReminderOverlay';
+import { BalanceDetailModal, BalanceViewType } from './components/BalanceDetailModal';
 import { BottomNav } from './components/BottomNav';
 import { Loader2 } from 'lucide-react';
 
@@ -140,6 +141,10 @@ function HisaabdoMain() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isSecurityQuestionsOpen, setIsSecurityQuestionsOpen] = useState(false);
+
+  // Balance detail modal state
+  const [isBalanceDetailOpen, setIsBalanceDetailOpen] = useState(false);
+  const [balanceViewType, setBalanceViewType] = useState<BalanceViewType>('owed');
 
   // Group Link & Member Password Portal state
   const [portalGroupId, setPortalGroupId] = useState<string | null>(null);
@@ -552,6 +557,10 @@ function HisaabdoMain() {
             onOpenCreateGroup={() => setIsCreateGroupOpen(true)}
             onOpenSettleUp={handleOpenSettleUp}
             onOpenJoinGroup={() => setIsJoinGroupOpen(true)}
+            onOpenBalanceDetail={(viewType) => {
+              setBalanceViewType(viewType);
+              setIsBalanceDetailOpen(true);
+            }}
           />
         )}
       </main>
@@ -690,6 +699,22 @@ function HisaabdoMain() {
           onSuccess={handlePortalSuccess}
         />
       )}
+
+      {/* 11. Balance Detail Modal (You are owed / You owe breakdown) */}
+      <BalanceDetailModal
+        isOpen={isBalanceDetailOpen}
+        viewType={balanceViewType}
+        groups={groups}
+        onClose={() => setIsBalanceDetailOpen(false)}
+        onSelectGroup={(groupId) => {
+          setIsBalanceDetailOpen(false);
+          handleSelectGroup(groupId);
+        }}
+        onOpenSettleUp={(groupId, payerId, receiverId, amount) => {
+          setIsBalanceDetailOpen(false);
+          handleOpenSettleUp(groupId, payerId, receiverId, amount);
+        }}
+      />
 
       {/* Dramatic Fullscreen Payment Reminder Popup with Guns and Sound */}
       <GunReminderOverlay

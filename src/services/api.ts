@@ -8,6 +8,7 @@ import {
   NotificationItem,
   ActivityItem,
   AnalyticsData,
+  ChatMessageItem,
   SplitType,
   GroupCategory,
   CurrencyCode
@@ -326,5 +327,19 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ imageBase64, mimeType })
     });
+  },
+
+  // Group Chat
+  async getChatMessages(groupId: string, limit: number = 100): Promise<ChatMessageItem[]> {
+    const res = await request<{ messages: ChatMessageItem[] }>(`/api/groups/${groupId}/chat?limit=${limit}`);
+    return res.messages;
+  },
+
+  async sendChatMessage(groupId: string, message: string): Promise<ChatMessageItem> {
+    const res = await request<{ message: ChatMessageItem }>(`/api/groups/${groupId}/chat`, {
+      method: 'POST',
+      body: JSON.stringify({ message })
+    });
+    return res.message;
   }
 };

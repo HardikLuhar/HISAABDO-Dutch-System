@@ -1,5 +1,5 @@
 import { supabase } from './supabase.js';
-import { User, Group, GroupMember, Expense, Settlement, NotificationItem, ActivityItem, UserSecurityQuestion } from './types.js';
+import { User, Group, GroupMember, Expense, Settlement, NotificationItem, ActivityItem, UserSecurityQuestion, ChatMessage } from './types.js';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -938,9 +938,43 @@ class Database {
     return questions.map(q => q.questionId);
   }
 
+  // ─── Chat Messages Operations ──────────────────────────────────────────────
+
+  async getChatMessages(groupId: string, limit: number = 100): Promise<ChatMessage[]> {
+    const { data, error } = await supabase
+      .from('chat_messages')
+      .select('*')
+      .eq('group_id', groupId)
+      .order('created_at', { ascending: true })
+      .limit(limit);
+    if (error) { console.error('getChatMessages error:', error); return []; }
+    return (data || []).map((row: any): ChatMessage => ({
+      id: row.id,
+      groupId: row.group_id,
+      userId: row.user_id,
+      message: row.message,
+      createdAt: row.created_at,
+    }));
+  }
+
+  async createChatMessage(msg: ChatMessage): Promise<ChatMessage> {
+    const { error } = await supabase
+      .from('chat_messages')
+      .insert({
+        id: msg.id,
+        group_id: msg.groupId,
+        user_id: msg.userId,
+        message: msg.message,
+        created_at: msg.createdAt || new Date().toISOString(),
+      });
+    if (error) console.error('createChatMessage error:', error);
+    return msg;
+  }
+
   // ─── Utility ──────────────────────────────────────────────────────────────
 
   async clearAllData(): Promise<void> {
+    await supabase.from('chat_messages').delete().neq('id', '');
     await supabase.from('user_security_questions').delete().neq('id', '');
     await supabase.from('activities').delete().neq('id', '');
     await supabase.from('notifications').delete().neq('id', '');

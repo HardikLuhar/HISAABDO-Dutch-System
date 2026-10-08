@@ -138,3 +138,11 @@ export interface MemberBalance {
   share: number;
   net: number; // positive = receives, negative = owes
 }
+
+export interface ChatMessage {
+  id: string;
+  groupId: string;
+  userId: string;
+  message: string;
+  createdAt: string;
+}

@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import { ChangeMemberPasswordModal } from './ChangeMemberPasswordModal';
+import { GroupChat } from './GroupChat';
 
 interface GroupDetailProps {
   groupData: GroupCalculationData;
@@ -52,7 +53,7 @@ interface GroupDetailProps {
   onRemoveMember: (groupId: string, userId: string) => Promise<void>;
 }
 
-type TabType = 'expenses' | 'balances' | 'analytics' | 'settlements' | 'members';
+type TabType = 'expenses' | 'balances' | 'analytics' | 'settlements' | 'chat' | 'members';
 
 const CHART_COLORS = ['#10B981', '#3B82F6', '#F59E0B', '#EC4899', '#8B5CF6', '#6366F1', '#14B8A6', '#F43F5E'];
 
@@ -488,6 +489,20 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
             <CheckCircle2 className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
             <span className="hidden sm:inline">Settlements ({settlements.length})</span>
             <span className="sm:hidden">Paid ({settlements.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('chat')}
+            className={`py-2 sm:py-2.5 px-2.5 sm:px-3.5 border-b-2 font-semibold text-[11px] sm:text-sm whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 sm:gap-2 ${
+              activeTab === 'chat'
+                ? 'border-emerald-600 text-emerald-700'
+                : 'border-transparent text-slate-500 hover:text-slate-700'
+            }`}
+            id="tab-chat-btn"
+          >
+            <MessageCircle className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
+            <span className="hidden sm:inline">Group Chat</span>
+            <span className="sm:hidden">Chat</span>
           </button>
 
           <button
@@ -1090,7 +1105,25 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
         </div>
       )}
 
-      {/* TAB 5: MEMBERS & GROUP SETTINGS (Section 4 & 26) */}
+      {/* TAB 6: GROUP CHAT */}
+      {activeTab === 'chat' && (
+        <GroupChat
+          groupId={group.id}
+          groupName={group.name}
+          members={groupData.group.members.map(m => {
+            const u = allUsers.find(usr => usr.id === m.userId);
+            return {
+              userId: m.userId,
+              name: u?.name || 'Member',
+              email: u?.email || '',
+              avatarUrl: u?.avatarUrl || '',
+              role: m.role,
+            };
+          })}
+        />
+      )}
+
+      {/* TAB 7: MEMBERS & GROUP SETTINGS (Section 4 & 26) */}
       {activeTab === 'members' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Members List */}

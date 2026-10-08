@@ -2,19 +2,52 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Hisaabdo - Group Expense & Bill Splitting</title>
     <meta name="description" content="Hisaabdo - Group Expense & Bill Splitting platform to manage group expenses, split bills fairly, and settle balances effortlessly." />
+
+    <!-- PWA Web App Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- App Icons -->
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
+
+    <!-- iOS / Safari Standalone PWA Support -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Hisaabdo" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <!-- Android / Chrome Standalone PWA Support -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="Hisaabdo" />
+
+    <!-- Open Graph & Social Cards -->
     <meta property="og:title" content="Hisaabdo - Group Expense & Bill Splitting" />
     <meta property="og:description" content="Hisaabdo - Group Expense & Bill Splitting platform to manage group expenses, split bills fairly, and settle balances effortlessly." />
     <meta property="og:type" content="website" />
+    <meta property="og:image" content="/icon-512.png" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="theme-color" content="#f8fafc" media="(prefers-color-scheme: light)" />
+
+    <!-- Theme Colors -->
+    <meta name="theme-color" content="#059669" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#020617" media="(prefers-color-scheme: dark)" />
+
     <style>
       /* Prevent white flash on dark-mode page load */
       html.dark { background-color: #020617; }
       html:not(.dark) { background-color: #f8fafc; }
+      
+      /* Smooth safe area padding for notch/home bar on mobile standalone mode */
+      body {
+        padding-top: env(safe-area-inset-top, 0px);
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+        padding-left: env(safe-area-inset-left, 0px);
+        padding-right: env(safe-area-inset-right, 0px);
+        -webkit-tap-highlight-color: transparent;
+      }
     </style>
     <script>
       // Apply dark class instantly before CSS/React loads to prevent flash
@@ -24,6 +57,19 @@
           document.documentElement.style.colorScheme = 'dark';
         }
       } catch(e) {}
+
+      // Register Service Worker for PWA standalone installation & offline caching
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then((reg) => {
+              console.log('[PWA] Service Worker registered:', reg.scope);
+            })
+            .catch((err) => {
+              console.warn('[PWA] Service Worker registration failed:', err);
+            });
+        });
+      }
     </script>
   </head>
   <body>

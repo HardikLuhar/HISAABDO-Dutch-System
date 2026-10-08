@@ -3,6 +3,7 @@ import { db } from '../db.js';
 import { requireAuth } from './auth.js';
 import { round2 } from '../engine.js';
 import { Settlement } from '../types.js';
+import { sendPushToUser } from '../push.js';
 
 export const settlementsRouter = Router();
 
@@ -94,16 +95,26 @@ settlementsRouter.post('/:groupId/settlements', requireAuth, async (req: any, re
 
     // Notify the payer that the receiver has marked/confirmed the settlement
     if (groupMemberIds.has(payerId)) {
+      const currSymbol = group.defaultCurrency === 'INR' ? '₹' : `${group.defaultCurrency} `;
+      const settleMessage = `🤝 ${req.user.name} settled ${currSymbol}${settleAmount} with you in ${group.name}`;
+
       await db.createNotification({
         id: `notif_${Date.now()}`,
         userId: payerId,
         type: 'SETTLEMENT_RECORDED',
         title: 'Payment Settled',
-        message: `${req.user.name} marked ${group.defaultCurrency} ${settleAmount} settled with you in "${group.name}".`,
+        message: settleMessage,
         groupId,
         relatedId: settlementId,
         read: false,
         createdAt: new Date().toISOString()
+      });
+
+      // Send push notification directly to Android notification tray
+      await sendPushToUser(payerId, {
+        title: 'Payment Settled',
+        body: settleMessage,
+        url: `/?group=${groupId}`
       });
     }
 

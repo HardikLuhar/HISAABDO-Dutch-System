@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#059669" />
+      <stop offset="50%" stop-color="#0d9488" />
+      <stop offset="100%" stop-color="#0f766e" />
+    </linearGradient>
+    <linearGradient id="glowGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.25" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#042f2e" flood-opacity="0.35" />
+    </filter>
+  </defs>
+
+  <!-- Background rounded rect -->
+  <rect width="512" height="512" rx="128" fill="url(#bgGrad)" />
+  <rect width="512" height="256" rx="128" fill="url(#glowGrad)" />
+
+  <!-- App Badge / Center Motif: Bill split exchange arrows & currency mark -->
+  <g filter="url(#shadow)" stroke="#ffffff" stroke-width="28" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <!-- Top arrow: pointing right -->
+    <path d="M 160 210 L 352 210" />
+    <path d="M 292 150 L 352 210 L 292 270" />
+
+    <!-- Bottom arrow: pointing left -->
+    <path d="M 352 310 L 160 310" />
+    <path d="M 220 250 L 160 310 L 220 370" />
+  </g>
+
+  <!-- Central dot/accent representing fair split -->
+  <circle cx="256" cy="260" r="14" fill="#34d399" />
+</svg>

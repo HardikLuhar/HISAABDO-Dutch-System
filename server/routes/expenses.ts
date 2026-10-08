@@ -3,6 +3,7 @@ import { db } from '../db.js';
 import { requireAuth } from './auth.js';
 import { calculateSplits, round2 } from '../engine.js';
 import { Expense, ExpensePayer, SplitType } from '../types.js';
+import { sendPushToUser } from '../push.js';
 
 export const expensesRouter = Router();
 
@@ -216,18 +217,31 @@ expensesRouter.post('/:groupId/expenses', requireAuth, async (req: any, res) => 
 
     // 4. Send Notifications ONLY to participants who are members in this group (excluding the creator)
     const groupMemberIds = new Set(group.members.map((m: any) => m.userId));
+    const currSymbol = group.defaultCurrency === 'INR' ? '₹' : `${group.defaultCurrency} `;
+
     for (const s of splitResult.splits) {
       if (s.userId !== req.user.id && groupMemberIds.has(s.userId)) {
+        // Short and simple format: "<user_name> paid <amount> for <description> and you have to give <amount> to him"
+        const notifMessage = `💸 ${req.user.name} paid ${currSymbol}${totalAmount} for ${newExpense.description} and you have to give ${currSymbol}${s.amount} to him`;
+
         await db.createNotification({
           id: `notif_${Date.now()}_${s.userId}`,
           userId: s.userId,
           type: 'EXPENSE_ADDED',
-          title: 'New Expense Added',
-          message: `${req.user.name} added "${newExpense.description}" (${group.defaultCurrency} ${totalAmount}). Your share: ${group.defaultCurrency} ${s.amount}.`,
+          title: 'Hisaabdo',
+          message: notifMessage,
           groupId,
           relatedId: expenseId,
           read: false,
           createdAt: new Date().toISOString()
+        });
+
+        // Send Push Notification directly to Android notification drawer
+        await sendPushToUser(s.userId, {
+          title: 'Hisaabdo',
+          body: notifMessage,
+          icon: '/icon-192.png',
+          url: `/?group=${groupId}`
         });
       }
     }

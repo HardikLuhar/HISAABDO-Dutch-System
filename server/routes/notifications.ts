@@ -1,8 +1,57 @@
 import { Router } from 'express';
 import { db } from '../db.js';
 import { requireAuth } from './auth.js';
+import { VAPID_PUBLIC_KEY, savePushSubscription, removePushSubscription, sendPushToUser } from '../push.js';
 
 export const notificationsRouter = Router();
+
+// Get public VAPID key for frontend registration
+notificationsRouter.get('/vapid-key', (req, res) => {
+  return res.json({ publicKey: VAPID_PUBLIC_KEY });
+});
+
+// Subscribe device for Web Push notifications
+notificationsRouter.post('/subscribe', requireAuth, async (req: any, res) => {
+  try {
+    const { subscription } = req.body;
+    if (!subscription || !subscription.endpoint) {
+      return res.status(400).json({ error: 'Valid subscription object is required' });
+    }
+    await savePushSubscription(req.user.id, subscription, req.headers['user-agent']);
+    return res.json({ success: true });
+  } catch (err: any) {
+    console.error('Push subscribe error:', err);
+    return res.status(500).json({ error: err.message || 'Internal server error' });
+  }
+});
+
+// Unsubscribe device
+notificationsRouter.post('/unsubscribe', requireAuth, async (req: any, res) => {
+  try {
+    const { endpoint } = req.body;
+    if (endpoint) {
+      await removePushSubscription(endpoint);
+    }
+    return res.json({ success: true });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message || 'Internal server error' });
+  }
+});
+
+// Send test push to the logged-in user's device
+notificationsRouter.post('/test-push', requireAuth, async (req: any, res) => {
+  try {
+    const testBody = `💸 ${req.user.name} paid ₹500 for dinner and you have to give ₹250 to him`;
+    const result = await sendPushToUser(req.user.id, {
+      title: 'Hisaabdo',
+      body: testBody,
+      url: '/'
+    });
+    return res.json({ success: true, ...result, message: 'Test notification sent to your device!' });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message || 'Internal server error' });
+  }
+});
 
 // Get current user's notifications
 notificationsRouter.get('/', requireAuth, async (req: any, res) => {
@@ -64,6 +113,8 @@ notificationsRouter.post('/remind', requireAuth, async (req: any, res) => {
     }
 
     const groupName = group.name;
+    const currSymbol = currency === 'INR' ? '₹' : currency;
+    const reminderMessage = `⏰ ${req.user.name} reminded you: You have to give ${currSymbol}${amount} to him`;
 
     // Create notification for the debtor
     const notif = await db.createNotification({
@@ -71,7 +122,7 @@ notificationsRouter.post('/remind', requireAuth, async (req: any, res) => {
       userId: toUserId,
       type: 'PAYMENT_REMINDER',
       title: 'Payment Reminder',
-      message: `${req.user.name} sent a friendly reminder: You owe ${currency} ${amount} in "${groupName}".`,
+      message: reminderMessage,
       groupId,
       relatedId: JSON.stringify({
         senderName: req.user.name,
@@ -82,6 +133,13 @@ notificationsRouter.post('/remind', requireAuth, async (req: any, res) => {
       }),
       read: false,
       createdAt: new Date().toISOString()
+    });
+
+    // Send push notification directly to Android notification tray
+    await sendPushToUser(toUserId, {
+      title: 'Payment Reminder',
+      body: reminderMessage,
+      url: `/?group=${groupId}`
     });
 
     // Log activity

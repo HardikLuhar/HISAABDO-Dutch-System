@@ -314,6 +314,33 @@ export const api = {
     });
   },
 
+  async getVapidPublicKey(): Promise<string> {
+    const res = await request<{ publicKey: string }>('/api/notifications/vapid-key');
+    return res.publicKey;
+  },
+
+  async subscribePush(subscription: any): Promise<boolean> {
+    const res = await request<{ success: boolean }>('/api/notifications/subscribe', {
+      method: 'POST',
+      body: JSON.stringify({ subscription })
+    });
+    return res.success;
+  },
+
+  async unsubscribePush(endpoint: string): Promise<boolean> {
+    const res = await request<{ success: boolean }>('/api/notifications/unsubscribe', {
+      method: 'POST',
+      body: JSON.stringify({ endpoint })
+    });
+    return res.success;
+  },
+
+  async sendTestPush(): Promise<{ success: boolean; message: string }> {
+    return request<{ success: boolean; message: string }>('/api/notifications/test-push', {
+      method: 'POST'
+    });
+  },
+
   // Activity Feed
   async getActivities(groupId?: string, limit: number = 20): Promise<ActivityItem[]> {
     const query = groupId ? `?groupId=${groupId}&limit=${limit}` : `?limit=${limit}`;

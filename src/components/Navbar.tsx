@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import { useTheme } from '../context/ThemeContext';
-import { Bell, Plus, Users, User as UserIcon, LogOut, ChevronDown, Check, ArrowRightLeft, Sparkles, Sun, Moon } from 'lucide-react';
+import { Bell, Plus, Users, User as UserIcon, LogOut, ChevronDown, Check, ArrowRightLeft, Sparkles, Sun, Moon, Smartphone } from 'lucide-react';
 import { CURRENCY_SYMBOLS } from '../utils/formatters';
 
 interface NavbarProps {
@@ -21,7 +21,16 @@ export const Navbar: React.FC<NavbarProps> = ({
   onNavigateHome
 }) => {
   const { user, logout } = useAuth();
-  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotification();
+  const {
+    notifications,
+    unreadCount,
+    markAsRead,
+    markAllAsRead,
+    isPushSupported,
+    pushPermission,
+    requestPushPermission,
+    sendTestPush
+  } = useNotification();
   const { isDark, toggleTheme } = useTheme();
 
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -122,12 +131,31 @@ export const Navbar: React.FC<NavbarProps> = ({
                       {unreadCount > 0 && (
                         <button
                           onClick={markAllAsRead}
-                          className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 font-medium"
+                          className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 font-medium cursor-pointer"
                         >
                           Mark all as read
                         </button>
                       )}
                     </div>
+
+                    {/* Enable Mobile Push Notifications Banner */}
+                    {isPushSupported && pushPermission !== 'granted' && (
+                      <div className="mx-3 my-2 p-2.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 rounded-xl flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <Smartphone className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                          <span className="text-[11px] font-medium text-emerald-900 dark:text-emerald-200">
+                            Get notifications on phone screen
+                          </span>
+                        </div>
+                        <button
+                          onClick={requestPushPermission}
+                          className="px-2.5 py-1 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition shrink-0 cursor-pointer shadow-xs"
+                        >
+                          Enable
+                        </button>
+                      </div>
+                    )}
+
                     <div className="max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
                       {notifications.length === 0 ? (
                         <div className="p-6 text-center text-xs text-slate-400 dark:text-slate-500">
@@ -153,6 +181,23 @@ export const Navbar: React.FC<NavbarProps> = ({
                         ))
                       )}
                     </div>
+
+                    {/* Mobile Notification Status & Test Button */}
+                    {isPushSupported && pushPermission === 'granted' && (
+                      <div className="px-3.5 py-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/60 dark:bg-slate-800/40">
+                        <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                          Phone push active
+                        </span>
+                        <button
+                          onClick={sendTestPush}
+                          className="text-[11px] font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition cursor-pointer"
+                          title="Send test notification to mobile"
+                        >
+                          Test on Phone 🔔
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

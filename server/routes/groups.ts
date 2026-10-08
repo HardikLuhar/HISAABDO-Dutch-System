@@ -4,6 +4,7 @@ import { requireAuth } from './auth.js';
 import { createSessionToken } from '../auth.js';
 import { calculateGroupBalances, calculatePairwiseDebts, simplifyDebts } from '../engine.js';
 import { Group, GroupCategory, CurrencyCode, User, GroupMember } from '../types.js';
+import { sendPushToUser } from '../push.js';
 
 export const groupsRouter = Router();
 
@@ -519,15 +520,23 @@ groupsRouter.post('/:id/members', requireAuth, async (req: any, res) => {
     }
 
     // Notify user
+    const groupNotifMessage = `👥 ${req.user.name} added you to "${group.name}"`;
     await db.createNotification({
       id: `notif_${Date.now()}`,
       userId: user.id,
       type: 'GROUP_INVITE',
       title: 'Added to Group',
-      message: `${req.user.name} added you to "${group.name}".`,
+      message: groupNotifMessage,
       groupId,
       read: false,
       createdAt: new Date().toISOString()
+    });
+
+    // Send push notification directly to Android notification tray
+    await sendPushToUser(user.id, {
+      title: 'Added to Group',
+      body: groupNotifMessage,
+      url: `/?group=${groupId}`
     });
 
     await db.createActivity({

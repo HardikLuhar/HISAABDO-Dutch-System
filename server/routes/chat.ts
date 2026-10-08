@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { db } from '../db.js';
 import { requireAuth } from './auth.js';
 import { ChatMessage } from '../types.js';
+import { sendPushToUser } from '../push.js';
 
 export const chatRouter = Router();
 
@@ -74,6 +75,17 @@ chatRouter.post('/:groupId/chat', requireAuth, async (req: any, res) => {
     };
 
     await db.createChatMessage(chatMsg);
+
+    // Send push notification to other group members
+    for (const member of group.members) {
+      if (member.userId !== req.user.id) {
+        sendPushToUser(member.userId, {
+          title: `💬 ${group.name}`,
+          body: `${req.user.name}: ${chatMsg.message}`,
+          url: `/?group=${groupId}&chat=1`
+        }).catch(() => {});
+      }
+    }
 
     return res.status(201).json({
       message: {

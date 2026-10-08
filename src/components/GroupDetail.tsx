@@ -829,17 +829,24 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
                         </span>
 
                         <div className="flex items-center gap-2">
-                          {/* Settle Now CTA — only visible to the payer or receiver of this debt */}
-                          {(isUserPayer || isUserReceiver) ? (
+                          {/* Settle Now CTA — only visible to the receiver of this debt */}
+                          {isUserReceiver ? (
                             <button
                               onClick={() => onOpenSettleUp(group.id, debt.fromUserId, debt.toUserId, debt.amount)}
                               className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition cursor-pointer"
                             >
                               Settle Now
                             </button>
+                          ) : isUserPayer ? (
+                            <span
+                              className="px-2.5 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 text-xs font-medium border border-amber-200/60 dark:border-amber-800/60"
+                              title="Only the receiver who gets the money can confirm settlement"
+                            >
+                              Receiver must settle
+                            </span>
                           ) : (
-                            <span className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-400 text-xs font-medium">
-                              Only involved members can settle
+                            <span className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-400 text-xs font-medium">
+                              Only receiver can settle
                             </span>
                           )}
 

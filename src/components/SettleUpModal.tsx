@@ -53,16 +53,23 @@ export const SettleUpModal: React.FC<SettleUpModalProps> = ({
 
   useEffect(() => {
     if (members.length >= 2) {
-      setPayerId(defaultPayerId || user?.id || members[0].userId);
-      const otherMember = members.find(m => m.userId !== (defaultPayerId || user?.id || members[0].userId));
-      setReceiverId(defaultReceiverId || otherMember?.userId || members[1].userId);
+      const myId = user?.id;
+      // The current user must be the receiver since only the payment receiver can settle
+      const targetReceiverId = myId || defaultReceiverId || members[1].userId;
+      setReceiverId(targetReceiverId);
+
+      const otherMembers = members.filter(m => m.userId !== targetReceiverId);
+      const chosenPayer = defaultPayerId && defaultPayerId !== targetReceiverId
+        ? defaultPayerId
+        : (otherMembers[0]?.userId || members[0].userId);
+      setPayerId(chosenPayer);
     }
     if (defaultAmount !== undefined && defaultAmount > 0) {
       setAmount(defaultAmount.toString());
     }
-  }, [selectedGroupId, defaultPayerId, defaultReceiverId, defaultAmount, members.length]);
+  }, [selectedGroupId, defaultPayerId, defaultReceiverId, defaultAmount, members.length, user?.id]);
 
-  const isUserInvolved = !user?.id || payerId === user.id || receiverId === user.id;
+  const isUserReceiver = !user?.id || receiverId === user.id;
 
   if (!isOpen) return null;
 
@@ -80,8 +87,8 @@ export const SettleUpModal: React.FC<SettleUpModalProps> = ({
       return;
     }
 
-    if (!isUserInvolved) {
-      showToast('Only the debt provider or debt taker can settle this debt', 'error');
+    if (!isUserReceiver) {
+      showToast('Only the payment receiver can settle this money', 'error');
       return;
     }
 
@@ -210,35 +217,34 @@ export const SettleUpModal: React.FC<SettleUpModalProps> = ({
           </div>
 
           {/* Payer & Receiver Selectors */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Who paid?</label>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Who paid you?</label>
               <select
                 value={payerId}
                 onChange={(e) => setPayerId(e.target.value)}
-                className="w-full p-2 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20"
+                className="w-full p-2.5 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20"
               >
-                {members.map(m => (
-                  <option key={m.userId} value={m.userId}>
-                    {m.name} {m.userId === user?.id && '(You)'}
-                  </option>
-                ))}
+                {members
+                  .filter(m => m.userId !== (user?.id || receiverId))
+                  .map(m => (
+                    <option key={m.userId} value={m.userId}>
+                      {m.name}
+                    </option>
+                  ))}
               </select>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Who received?</label>
-              <select
-                value={receiverId}
-                onChange={(e) => setReceiverId(e.target.value)}
-                className="w-full p-2 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20"
-              >
-                {members.map(m => (
-                  <option key={m.userId} value={m.userId} disabled={m.userId === payerId}>
-                    {m.name} {m.userId === user?.id && '(You)'}
-                  </option>
-                ))}
-              </select>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Who received? (Only receiver can settle)
+              </label>
+              <div className="w-full p-2 text-xs bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white font-medium flex items-center justify-between">
+                <span className="truncate">{receiver?.name || user?.name || 'You'} {receiver?.userId === user?.id && '(You)'}</span>
+                <span className="text-[10px] bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 font-bold px-2 py-0.5 rounded-full shrink-0">
+                  Receiver
+                </span>
+              </div>
             </div>
           </div>
 
@@ -287,9 +293,9 @@ export const SettleUpModal: React.FC<SettleUpModalProps> = ({
             </div>
           </div>
 
-          {!isUserInvolved && (
+          {!isUserReceiver && (
             <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs flex items-center gap-2">
-              <span>⚠️ Only the debt provider or debt taker is permitted to record a settlement.</span>
+              <span>⚠️ Only the payment receiver ({receiver?.name || 'Receiver'}) can settle this money.</span>
             </div>
           )}
 
@@ -304,10 +310,10 @@ export const SettleUpModal: React.FC<SettleUpModalProps> = ({
             </button>
             <button
               type="submit"
-              disabled={isSubmitting || !isUserInvolved}
+              disabled={isSubmitting || !isUserReceiver}
               className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-md shadow-emerald-600/30 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
-              {isSubmitting ? 'Recording...' : 'Record Payment'}
+              {isSubmitting ? 'Recording...' : 'Confirm & Settle Payment'}
             </button>
           </div>
         </form>

@@ -58,10 +58,10 @@ settlementsRouter.post('/:groupId/settlements', requireAuth, async (req: any, re
       return res.status(400).json({ error: 'Payer and receiver cannot be the same person' });
     }
 
-    // Only the debt payer or receiver can record a settlement
+    // Only the payment receiver can record a settlement
     const currentUserId = req.user?.id;
-    if (currentUserId !== payerId && currentUserId !== receiverId) {
-      return res.status(403).json({ error: 'Only the debt provider or debt taker can settle this debt' });
+    if (currentUserId !== receiverId) {
+      return res.status(403).json({ error: 'Only the payment receiver can settle this debt' });
     }
 
     const settleAmount = round2(Number(amount));
@@ -92,18 +92,14 @@ settlementsRouter.post('/:groupId/settlements', requireAuth, async (req: any, re
 
     await db.createSettlement(settlement);
 
-    // Notify only the other party who belongs to this group
-    const targetUserId = req.user.id === payerId ? receiverId : payerId;
-    if (groupMemberIds.has(targetUserId)) {
-      const isPayerRecording = req.user.id === payerId;
+    // Notify the payer that the receiver has marked/confirmed the settlement
+    if (groupMemberIds.has(payerId)) {
       await db.createNotification({
         id: `notif_${Date.now()}`,
-        userId: targetUserId,
+        userId: payerId,
         type: 'SETTLEMENT_RECORDED',
-        title: isPayerRecording ? 'Payment Recorded' : 'Payment Settled',
-        message: isPayerRecording
-          ? `${req.user.name} recorded a payment of ${group.defaultCurrency} ${settleAmount} to you in "${group.name}".`
-          : `${req.user.name} marked ${group.defaultCurrency} ${settleAmount} settled with you in "${group.name}".`,
+        title: 'Payment Settled',
+        message: `${req.user.name} marked ${group.defaultCurrency} ${settleAmount} settled with you in "${group.name}".`,
         groupId,
         relatedId: settlementId,
         read: false,
@@ -119,7 +115,7 @@ settlementsRouter.post('/:groupId/settlements', requireAuth, async (req: any, re
       userName: req.user.name,
       userAvatar: req.user.avatarUrl,
       action: 'RECORDED_SETTLEMENT',
-      description: `${payer ? payer.name : 'Unknown'} settled ${group.defaultCurrency} ${settleAmount} with ${receiver ? receiver.name : 'Unknown'}`,
+      description: `${receiver ? receiver.name : 'Unknown'} marked ${group.defaultCurrency} ${settleAmount} settled from ${payer ? payer.name : 'Unknown'}`,
       amount: settleAmount,
       currency: group.defaultCurrency,
       createdAt: new Date().toISOString()
@@ -136,6 +132,16 @@ settlementsRouter.post('/:groupId/settlements', requireAuth, async (req: any, re
 settlementsRouter.delete('/:groupId/settlements/:id', requireAuth, async (req: any, res) => {
   try {
     const { groupId, id } = req.params;
+    const settlements = await db.getSettlementsByGroup(groupId);
+    const settlement = settlements.find(s => s.id === id);
+    if (!settlement) {
+      return res.status(404).json({ error: 'Settlement not found' });
+    }
+
+    if (req.user?.id !== settlement.receiverId) {
+      return res.status(403).json({ error: 'Only the payment receiver can delete this settlement' });
+    }
+
     await db.deleteSettlement(id);
     return res.json({ message: 'Settlement deleted successfully' });
   } catch (err: any) {

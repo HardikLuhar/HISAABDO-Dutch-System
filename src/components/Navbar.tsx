@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import { useTheme } from '../context/ThemeContext';
-import { Bell, Plus, Users, User as UserIcon, LogOut, ChevronDown, Check, ArrowRightLeft, Sparkles, Sun, Moon, Smartphone } from 'lucide-react';
+import { Bell, Plus, Users, User as UserIcon, LogOut, ChevronDown, Check, ArrowRightLeft, Sparkles, Sun, Moon, Smartphone, Receipt } from 'lucide-react';
 import { CURRENCY_SYMBOLS } from '../utils/formatters';
 
 interface NavbarProps {
@@ -11,6 +11,7 @@ interface NavbarProps {
   onOpenProfile: () => void;
   onOpenAuth: () => void;
   onNavigateHome: () => void;
+  onOpenSummary?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -18,7 +19,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenCreateGroup,
   onOpenProfile,
   onOpenAuth,
-  onNavigateHome
+  onNavigateHome,
+  onOpenSummary
 }) => {
   const { user, logout } = useAuth();
   const {
@@ -88,6 +90,19 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {user ? (
             <>
+              {/* Total Summary Quick CTA */}
+              {onOpenSummary && (
+                <button
+                  onClick={onOpenSummary}
+                  className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold transition cursor-pointer"
+                  id="navbar-summary-btn"
+                  title="Cross-Group Total Summary"
+                >
+                  <Receipt className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
+                  <span>Total Summary</span>
+                </button>
+              )}
+
               {/* Create Group Quick CTA */}
               <button
                 onClick={onOpenCreateGroup}
@@ -246,6 +261,20 @@ export const Navbar: React.FC<NavbarProps> = ({
                           {isDark ? 'Dark Mode' : 'Light Mode'}
                         </span>
                       </button>
+
+                      {onOpenSummary && (
+                        <button
+                          onClick={() => {
+                            setShowUserMenu(false);
+                            onOpenSummary();
+                          }}
+                          className="w-full flex items-center gap-2.5 px-3.5 py-2 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+                          id="menu-summary-btn"
+                        >
+                          <Receipt className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
+                          <span>Total Summary</span>
+                        </button>
+                      )}
 
                       <button
                         onClick={() => {

@@ -289,6 +289,42 @@ export const api = {
     await request(`/api/groups/${groupId}/settlements/${settlementId}`, { method: 'DELETE' });
   },
 
+  // Settlement Claims (Cross-group settlement & anti-fake verification)
+  async createSettlementClaim(data: {
+    receiverId: string;
+    totalAmount: number;
+    paymentMethod: 'QR' | 'CASH';
+    groupDebts: Array<{
+      groupId: string;
+      groupName: string;
+      amount: number;
+      currency: CurrencyCode;
+    }>;
+  }): Promise<{ claim: any }> {
+    return request<{ claim: any }>('/api/settlements/claims', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  async getPendingSettlementClaims(): Promise<any[]> {
+    const res = await request<{ claims: any[] }>('/api/settlements/claims/pending');
+    return res.claims;
+  },
+
+  async acceptSettlementClaim(claimId: string): Promise<{ success: boolean; settledCount: number }> {
+    return request<{ success: boolean; settledCount: number }>(`/api/settlements/claims/${claimId}/accept`, {
+      method: 'POST'
+    });
+  },
+
+  async rejectSettlementClaim(claimId: string, reason?: string): Promise<{ success: boolean; message: string }> {
+    return request<{ success: boolean; message: string }>(`/api/settlements/claims/${claimId}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ reason })
+    });
+  },
+
   // Analytics
   async getAnalytics(groupId: string): Promise<AnalyticsData> {
     return request<AnalyticsData>(`/api/analytics/${groupId}`);

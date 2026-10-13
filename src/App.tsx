@@ -21,7 +21,9 @@ import { AuthView } from './components/AuthView';
 import { GroupPortalModal } from './components/GroupPortalModal';
 import { GunReminderOverlay } from './components/GunReminderOverlay';
 import { BalanceDetailModal, BalanceViewType } from './components/BalanceDetailModal';
+import { TotalSummaryView } from './components/TotalSummaryView';
 import { BottomNav } from './components/BottomNav';
+import { PaymentVerificationModal } from './components/PaymentVerificationModal';
 import { Loader2 } from 'lucide-react';
 
 // ─── URL Helpers ───────────────────────────────────────────────────────────────
@@ -100,9 +102,9 @@ function HisaabdoMain() {
   const CACHE_TTL = 60_000; // 1 minute — serve stale, revalidate in background
 
   // Mobile navigation tab — restore from URL on mount
-  const [mobileTab, setMobileTabRaw] = useState<'home' | 'groups' | 'activity' | 'profile'>(() => {
+  const [mobileTab, setMobileTabRaw] = useState<'home' | 'groups' | 'summary' | 'activity' | 'profile'>(() => {
     const t = getUrlParam('tab');
-    return (t === 'groups' || t === 'activity' || t === 'profile') ? t : 'home';
+    return (t === 'groups' || t === 'summary' || t === 'activity' || t === 'profile') ? t : 'home';
   });
 
   // Wrappers that sync state → URL
@@ -111,7 +113,7 @@ function HisaabdoMain() {
     setUrlParams({ group: id, tab: null }); // clear tab when viewing a group
   }, []);
 
-  const setMobileTab = useCallback((tab: 'home' | 'groups' | 'activity' | 'profile') => {
+  const setMobileTab = useCallback((tab: 'home' | 'groups' | 'summary' | 'activity' | 'profile') => {
     setMobileTabRaw(tab);
     setUrlParams({ tab: tab === 'home' ? null : tab });
   }, []);
@@ -527,6 +529,10 @@ function HisaabdoMain() {
           setSelectedGroupId(null);
           setMobileTab('home');
         }}
+        onOpenSummary={() => {
+          setSelectedGroupId(null);
+          setMobileTab('summary');
+        }}
       />
 
       {/* Main Content Area */}
@@ -554,6 +560,14 @@ function HisaabdoMain() {
             onDeleteGroup={handleDeleteGroup}
             onUpdateGroup={handleUpdateGroup}
             onRemoveMember={handleRemoveMember}
+          />
+        ) : mobileTab === 'summary' ? (
+          <TotalSummaryView
+            groups={groups}
+            allUsers={allUsers}
+            onSelectGroup={handleSelectGroup}
+            onOpenSettleUp={handleOpenSettleUp}
+            onRefreshAll={refreshAll}
           />
         ) : (
           <Dashboard
@@ -738,6 +752,13 @@ function HisaabdoMain() {
             setSelectedGroupId(groupId);
           }
           setIsSettleUpOpen(true);
+        }}
+      />
+
+      {/* Cross-Group Settlement Claim Verification Modal (Appears when receiver opens website/mobile web app) */}
+      <PaymentVerificationModal
+        onSettlementConfirmed={() => {
+          loadDashboardData(true);
         }}
       />
     </div>

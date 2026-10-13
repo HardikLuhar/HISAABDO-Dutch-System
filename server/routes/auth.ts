@@ -261,13 +261,15 @@ authRouter.get('/me', requireAuth, (req: any, res) => {
 // Update Profile
 authRouter.put('/profile', requireAuth, async (req: any, res) => {
   try {
-    const { name, phone, preferredCurrency, avatarUrl } = req.body;
+    const { name, phone, preferredCurrency, avatarUrl, qrCodeUrl, upiId } = req.body;
     const updates: any = {};
 
     if (name) updates.name = name.trim();
     if (phone !== undefined) updates.phone = phone.trim();
     if (preferredCurrency) updates.preferredCurrency = preferredCurrency;
     if (avatarUrl) updates.avatarUrl = avatarUrl;
+    if (qrCodeUrl !== undefined) updates.qrCodeUrl = qrCodeUrl;
+    if (upiId !== undefined) updates.upiId = upiId.trim();
 
     const updated = await db.updateUser(req.user.id, updates);
     if (!updated) {

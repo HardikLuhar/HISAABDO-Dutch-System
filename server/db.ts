@@ -1,10 +1,71 @@
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { supabase } from './supabase.js';
-import { User, Group, GroupMember, Expense, Settlement, NotificationItem, ActivityItem, UserSecurityQuestion, ChatMessage } from './types.js';
+import { User, Group, GroupMember, Expense, Settlement, NotificationItem, ActivityItem, UserSecurityQuestion, ChatMessage, SettlementClaim } from './types.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const DATA_DIR = path.resolve(__dirname, '../data');
+const USER_META_FILE = path.join(DATA_DIR, 'user_meta.json');
+const CLAIMS_FILE = path.join(DATA_DIR, 'settlement_claims.json');
+
+// In-memory + persisted storage for extra user profile fields (QR code, UPI ID)
+const userExtraMeta = new Map<string, { qrCodeUrl?: string; upiId?: string }>();
+function loadUserMeta() {
+  try {
+    if (fs.existsSync(USER_META_FILE)) {
+      const data = JSON.parse(fs.readFileSync(USER_META_FILE, 'utf-8'));
+      for (const [k, v] of Object.entries(data)) {
+        userExtraMeta.set(k, v as any);
+      }
+    }
+  } catch (e) {
+    // ignore
+  }
+}
+function saveUserMeta() {
+  try {
+    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+    const obj: Record<string, any> = {};
+    userExtraMeta.forEach((v, k) => { obj[k] = v; });
+    fs.writeFileSync(USER_META_FILE, JSON.stringify(obj, null, 2), 'utf-8');
+  } catch (e) {
+    // ignore
+  }
+}
+loadUserMeta();
+
+// In-memory + persisted storage for Settlement Claims
+const settlementClaimsMap = new Map<string, SettlementClaim>();
+function loadClaims() {
+  try {
+    if (fs.existsSync(CLAIMS_FILE)) {
+      const data = JSON.parse(fs.readFileSync(CLAIMS_FILE, 'utf-8'));
+      for (const c of data) {
+        settlementClaimsMap.set(c.id, c);
+      }
+    }
+  } catch (e) {
+    // ignore
+  }
+}
+function saveClaims() {
+  try {
+    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+    const list = Array.from(settlementClaimsMap.values());
+    fs.writeFileSync(CLAIMS_FILE, JSON.stringify(list, null, 2), 'utf-8');
+  } catch (e) {
+    // ignore
+  }
+}
+loadClaims();
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 /** Convert snake_case DB row to camelCase User object */
 function rowToUser(row: any): User {
+  const extra = userExtraMeta.get(row.id) || {};
   return {
     id: row.id,
     name: row.name,
@@ -14,6 +75,8 @@ function rowToUser(row: any): User {
     phone: row.phone ?? undefined,
     preferredCurrency: row.preferred_currency ?? 'INR',
     securityQuestionsSet: row.security_questions_set ?? false,
+    qrCodeUrl: row.qr_code_url ?? extra.qrCodeUrl ?? undefined,
+    upiId: row.upi_id ?? extra.upiId ?? undefined,
     createdAt: row.created_at,
   };
 }
@@ -246,6 +309,15 @@ class Database {
 
   async updateUser(id: string, updates: Partial<User>): Promise<User | null> {
     this.invalidateUsersCache();
+    // Persist extra fields in userExtraMeta
+    if (updates.qrCodeUrl !== undefined || updates.upiId !== undefined) {
+      const extra = userExtraMeta.get(id) || {};
+      if (updates.qrCodeUrl !== undefined) extra.qrCodeUrl = updates.qrCodeUrl;
+      if (updates.upiId !== undefined) extra.upiId = updates.upiId;
+      userExtraMeta.set(id, extra);
+      saveUserMeta();
+    }
+
     const dbUpdates: any = {};
     if (updates.name !== undefined) dbUpdates.name = updates.name;
     if (updates.email !== undefined) dbUpdates.email = updates.email;
@@ -254,15 +326,66 @@ class Database {
     if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
     if (updates.preferredCurrency !== undefined) dbUpdates.preferred_currency = updates.preferredCurrency;
     if (updates.securityQuestionsSet !== undefined) dbUpdates.security_questions_set = updates.securityQuestionsSet;
+    if (updates.qrCodeUrl !== undefined) dbUpdates.qr_code_url = updates.qrCodeUrl;
+    if (updates.upiId !== undefined) dbUpdates.upi_id = updates.upiId;
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('users')
       .update(dbUpdates)
       .eq('id', id)
       .select()
       .maybeSingle();
-    if (error || !data) { console.error('updateUser error:', error); return null; }
+
+    if (error) {
+      // If column doesn't exist in Supabase schema cache, retry without qr_code_url / upi_id
+      delete dbUpdates.qr_code_url;
+      delete dbUpdates.upi_id;
+      const retry = await supabase
+        .from('users')
+        .update(dbUpdates)
+        .eq('id', id)
+        .select()
+        .maybeSingle();
+      data = retry.data;
+      error = retry.error;
+    }
+
+    if (error || !data) {
+      console.error('updateUser error:', error);
+      const cached = (await this.getUsers()).find(u => u.id === id);
+      if (cached) {
+        return { ...cached, ...updates };
+      }
+      return null;
+    }
     return rowToUser(data);
+  }
+
+  // ─── Settlement Claims Operations ─────────────────────────────────────────
+
+  async createSettlementClaim(claim: SettlementClaim): Promise<SettlementClaim> {
+    settlementClaimsMap.set(claim.id, claim);
+    saveClaims();
+    return claim;
+  }
+
+  async getPendingClaimsForReceiver(receiverId: string): Promise<SettlementClaim[]> {
+    return Array.from(settlementClaimsMap.values())
+      .filter(c => c.receiverId === receiverId && c.status === 'PENDING')
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async getClaimById(id: string): Promise<SettlementClaim | null> {
+    return settlementClaimsMap.get(id) || null;
+  }
+
+  async updateClaim(id: string, updates: Partial<SettlementClaim>): Promise<SettlementClaim | null> {
+    const claim = settlementClaimsMap.get(id);
+    if (!claim) return null;
+    const updated: SettlementClaim = { ...claim, ...updates, updatedAt: new Date().toISOString() };
+    settlementClaimsMap.set(id, updated);
+    saveClaims();
+    return updated;
   }
 
   // ─── Group Operations ────────────────────────────────────────────────────

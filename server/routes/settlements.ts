@@ -160,3 +160,219 @@ settlementsRouter.delete('/:groupId/settlements/:id', requireAuth, async (req: a
     return res.status(500).json({ error: err.message || 'Internal server error' });
   }
 });
+
+// ─── Settlement Claims API (Multi-Group Settle & Anti-Fake Verification) ───────
+
+// 1. Payer submits a settlement claim (QR or Cash)
+settlementsRouter.post('/claims', requireAuth, async (req: any, res) => {
+  try {
+    const { receiverId, totalAmount, paymentMethod, groupDebts } = req.body;
+
+    if (!receiverId || !totalAmount || !Array.isArray(groupDebts) || !groupDebts.length) {
+      return res.status(400).json({ error: 'Receiver ID, total amount, and group debts are required.' });
+    }
+
+    if (receiverId === req.user.id) {
+      return res.status(400).json({ error: 'You cannot submit a settlement claim to yourself.' });
+    }
+
+    const receiver = await db.getUserById(receiverId);
+    if (!receiver) {
+      return res.status(404).json({ error: 'Receiver user not found.' });
+    }
+
+    const claimId = `claim_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+    const newClaim = await db.createSettlementClaim({
+      id: claimId,
+      payerId: req.user.id,
+      payerName: req.user.name,
+      payerAvatar: req.user.avatarUrl || '',
+      receiverId,
+      receiverName: receiver.name,
+      totalAmount: round2(Number(totalAmount)),
+      paymentMethod: paymentMethod === 'CASH' ? 'CASH' : 'QR',
+      groupDebts,
+      status: 'PENDING',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+
+    const methodLabel = paymentMethod === 'CASH' ? 'Cash' : 'QR Code';
+    const groupNames = groupDebts.map((g: any) => g.groupName).join(', ');
+    const claimMessage = `🔔 ${req.user.name} claims to have paid you ₹${totalAmount} via ${methodLabel} to settle debts in [${groupNames}]. Please confirm receipt!`;
+
+    // Notify receiver
+    await db.createNotification({
+      id: `notif_${Date.now()}`,
+      userId: receiverId,
+      type: 'PAYMENT_REMINDER',
+      title: 'Payment Verification Request',
+      message: claimMessage,
+      relatedId: claimId,
+      read: false,
+      createdAt: new Date().toISOString()
+    });
+
+    await sendPushToUser(receiverId, {
+      title: 'Payment Verification Request',
+      body: claimMessage,
+      url: `/?claim=${claimId}`
+    });
+
+    return res.status(201).json({ claim: newClaim });
+  } catch (err: any) {
+    console.error('create claim error:', err);
+    return res.status(500).json({ error: err.message || 'Internal server error' });
+  }
+});
+
+// 2. Get pending settlement claims for current user (as receiver)
+settlementsRouter.get('/claims/pending', requireAuth, async (req: any, res) => {
+  try {
+    const claims = await db.getPendingClaimsForReceiver(req.user.id);
+    return res.json({ claims });
+  } catch (err: any) {
+    console.error('get pending claims error:', err);
+    return res.status(500).json({ error: err.message || 'Internal server error' });
+  }
+});
+
+// 3. Receiver ACCEPTS payment claim -> automatically settles all groups in one go!
+settlementsRouter.post('/claims/:id/accept', requireAuth, async (req: any, res) => {
+  try {
+    const { id } = req.params;
+    const claim = await db.getClaimById(id);
+
+    if (!claim) {
+      return res.status(404).json({ error: 'Settlement claim not found.' });
+    }
+
+    if (claim.receiverId !== req.user.id) {
+      return res.status(403).json({ error: 'Only the payment receiver can confirm and settle this claim.' });
+    }
+
+    if (claim.status !== 'PENDING') {
+      return res.status(400).json({ error: `This claim has already been ${claim.status.toLowerCase()}.` });
+    }
+
+    // Automatically settle each group in one atomic sweep
+    let settledCount = 0;
+    const errors: string[] = [];
+
+    for (const gd of claim.groupDebts) {
+      try {
+        const group = await db.getGroupById(gd.groupId);
+        if (!group) continue;
+
+        const settlementId = `set_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+        await db.createSettlement({
+          id: settlementId,
+          groupId: gd.groupId,
+          payerId: claim.payerId,
+          receiverId: req.user.id,
+          amount: round2(Number(gd.amount)),
+          currency: gd.currency || group.defaultCurrency || 'INR',
+          date: new Date().toISOString().split('T')[0],
+          notes: `Verified settlement (${claim.paymentMethod === 'CASH' ? 'Cash' : 'QR'}) across multi-group claim`,
+          createdAt: new Date().toISOString()
+        });
+
+        // Log activity for this group
+        await db.createActivity({
+          id: `act_${Date.now()}_${settledCount}`,
+          groupId: gd.groupId,
+          userId: req.user.id,
+          userName: req.user.name,
+          userAvatar: req.user.avatarUrl,
+          action: 'RECORDED_SETTLEMENT',
+          description: `${req.user.name} confirmed ₹${gd.amount} payment from ${claim.payerName} in group "${group.name}"`,
+          amount: gd.amount,
+          currency: gd.currency || group.defaultCurrency,
+          createdAt: new Date().toISOString()
+        });
+
+        settledCount++;
+      } catch (e: any) {
+        errors.push(`${gd.groupName}: ${e.message}`);
+      }
+    }
+
+    // Mark claim accepted
+    await db.updateClaim(id, { status: 'ACCEPTED' });
+
+    // Notify payer that receiver accepted!
+    const groupList = claim.groupDebts.map(g => g.groupName).join(', ');
+    const acceptedMsg = `🤝 ${req.user.name} confirmed receipt of ₹${claim.totalAmount} (${claim.paymentMethod === 'CASH' ? 'Cash' : 'QR'}). Debts in [${groupList}] are now completely settled!`;
+
+    await db.createNotification({
+      id: `notif_${Date.now()}`,
+      userId: claim.payerId,
+      type: 'SETTLEMENT_RECORDED',
+      title: 'Payment Confirmed & Settled!',
+      message: acceptedMsg,
+      relatedId: id,
+      read: false,
+      createdAt: new Date().toISOString()
+    });
+
+    await sendPushToUser(claim.payerId, {
+      title: 'Payment Confirmed & Settled!',
+      body: acceptedMsg,
+      url: '/?tab=summary'
+    });
+
+    return res.json({ success: true, settledCount, errors });
+  } catch (err: any) {
+    console.error('accept claim error:', err);
+    return res.status(500).json({ error: err.message || 'Internal server error' });
+  }
+});
+
+// 4. Receiver REJECTS payment claim (Fake claim defense)
+settlementsRouter.post('/claims/:id/reject', requireAuth, async (req: any, res) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    const claim = await db.getClaimById(id);
+
+    if (!claim) {
+      return res.status(404).json({ error: 'Settlement claim not found.' });
+    }
+
+    if (claim.receiverId !== req.user.id) {
+      return res.status(403).json({ error: 'Only the payment receiver can reject this claim.' });
+    }
+
+    if (claim.status !== 'PENDING') {
+      return res.status(400).json({ error: `This claim has already been ${claim.status.toLowerCase()}.` });
+    }
+
+    // Mark claim rejected
+    await db.updateClaim(id, { status: 'REJECTED', rejectionReason: reason || 'Not received' });
+
+    // Send warning notification to payer that receiver rejected payment
+    const rejectedMsg = `❌ Payment Not Received: ${req.user.name} reported that your claimed payment of ₹${claim.totalAmount} was NOT received. Debts remain active.`;
+
+    await db.createNotification({
+      id: `notif_${Date.now()}`,
+      userId: claim.payerId,
+      type: 'PAYMENT_REMINDER',
+      title: 'Payment Claim Rejected',
+      message: rejectedMsg,
+      relatedId: id,
+      read: false,
+      createdAt: new Date().toISOString()
+    });
+
+    await sendPushToUser(claim.payerId, {
+      title: 'Payment Claim Rejected',
+      body: rejectedMsg,
+      url: '/?tab=summary'
+    });
+
+    return res.json({ success: true, message: 'Claim rejected. Payer has been notified.' });
+  } catch (err: any) {
+    console.error('reject claim error:', err);
+    return res.status(500).json({ error: err.message || 'Internal server error' });
+  }
+});

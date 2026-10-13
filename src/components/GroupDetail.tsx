@@ -29,11 +29,13 @@ import {
   KeyRound,
   MessageCircle,
   Edit2,
-  AlertTriangle
+  AlertTriangle,
+  QrCode
 } from 'lucide-react';
 import { ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import { ChangeMemberPasswordModal } from './ChangeMemberPasswordModal';
 import { GroupChat } from './GroupChat';
+import { MemberProfileModal } from './MemberProfileModal';
 
 interface GroupDetailProps {
   groupData: GroupCalculationData;
@@ -79,6 +81,7 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
 
   const [activeTab, setActiveTab] = useState<TabType>('expenses');
   const [copiedCode, setCopiedCode] = useState(false);
+  const [selectedMemberProfile, setSelectedMemberProfile] = useState<User | null>(null);
 
   // Expense search & filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -820,10 +823,32 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
                           <img
                             src={debt.toAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${debt.toName}`}
                             alt={debt.toName}
-                            className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover border border-slate-200"
+                            onClick={() => {
+                              const targetUser = allUsers.find(u => u.id === debt.toUserId) || {
+                                id: debt.toUserId,
+                                name: debt.toName,
+                                email: '',
+                                avatarUrl: debt.toAvatar || '',
+                              };
+                              setSelectedMemberProfile(targetUser as User);
+                            }}
+                            className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover border border-slate-200 cursor-pointer hover:ring-2 ring-indigo-500 transition"
+                            title="Click to view receiver's payment profile & QR"
                           />
                           <div className="text-xs">
-                            <span className="font-bold text-slate-900 block truncate max-w-[80px] sm:max-w-[100px]">
+                            <span
+                              onClick={() => {
+                                const targetUser = allUsers.find(u => u.id === debt.toUserId) || {
+                                  id: debt.toUserId,
+                                  name: debt.toName,
+                                  email: '',
+                                  avatarUrl: debt.toAvatar || '',
+                                };
+                                setSelectedMemberProfile(targetUser as User);
+                              }}
+                              className="font-bold text-slate-900 block truncate max-w-[80px] sm:max-w-[100px] hover:text-indigo-600 cursor-pointer"
+                              title="Click to view receiver's payment profile & QR"
+                            >
                               {debt.toName} {isUserReceiver && '(You)'}
                             </span>
                             <span className="text-[10px] text-slate-500">receives</span>
@@ -844,6 +869,25 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
                         </span>
 
                         <div className="flex items-center gap-2">
+                          {/* View QR Code Button */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const targetUser = allUsers.find(u => u.id === debt.toUserId) || {
+                                id: debt.toUserId,
+                                name: debt.toName,
+                                email: '',
+                                avatarUrl: debt.toAvatar || '',
+                              };
+                              setSelectedMemberProfile(targetUser as User);
+                            }}
+                            className="px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold flex items-center gap-1 transition cursor-pointer border border-indigo-200/60"
+                            title="View Receiver's Payment QR Code & UPI"
+                          >
+                            <QrCode className="w-3.5 h-3.5 text-indigo-600" />
+                            <span>QR Code</span>
+                          </button>
+
                           {/* Settle Now CTA — only visible to the receiver of this debt */}
                           {isUserReceiver ? (
                             <button
@@ -906,15 +950,28 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
                   {groupData.balances.map((b) => (
                     <tr key={b.userId} className={`hover:bg-slate-50/60 transition ${b.userId === user?.id ? 'bg-emerald-50/30' : ''}`}>
                       <td className="py-3 pr-4">
-                        <div className="flex items-center gap-2.5">
+                        <div
+                          onClick={() => {
+                            const found = allUsers.find(u => u.id === b.userId) || {
+                              id: b.userId,
+                              name: b.name,
+                              email: b.email,
+                              avatarUrl: b.avatarUrl || ''
+                            };
+                            setSelectedMemberProfile(found as User);
+                          }}
+                          className="flex items-center gap-2.5 cursor-pointer group/member"
+                          title="Click to view payment QR profile"
+                        >
                           <img
                             src={b.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${b.name}`}
                             alt={b.name}
-                            className="w-8 h-8 rounded-full object-cover border border-slate-200"
+                            className="w-8 h-8 rounded-full object-cover border border-slate-200 group-hover/member:ring-2 ring-indigo-500 transition"
                           />
                           <div>
-                            <span className="font-semibold text-slate-900 block">
-                              {b.name} {b.userId === user?.id && '(You)'}
+                            <span className="font-semibold text-slate-900 block group-hover/member:text-indigo-600 transition flex items-center gap-1">
+                              <span>{b.name} {b.userId === user?.id && '(You)'}</span>
+                              <QrCode className="w-3 h-3 text-indigo-500 flex-shrink-0" />
                             </span>
                             <span className="text-[10px] text-slate-400">{b.email}</span>
                           </div>
@@ -1152,16 +1209,74 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
                 return (
                   <div key={m.userId} className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
                     <div className="flex items-center gap-3">
-                      <img
-                        src={memberUser?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${memberUser?.name || m.userId}`}
-                        alt={memberUser?.name || 'Member'}
-                        className="w-10 h-10 rounded-full object-cover border border-slate-200"
-                      />
+                      <div
+                        onClick={() => {
+                          const profile: User = memberUser || {
+                            id: m.userId,
+                            name: memberUser?.name || 'Member',
+                            email: memberUser?.email || '',
+                            avatarUrl: memberUser?.avatarUrl || '',
+                            phone: memberUser?.phone,
+                            qrCodeUrl: memberUser?.qrCodeUrl,
+                            upiId: memberUser?.upiId
+                          };
+                          setSelectedMemberProfile(profile);
+                        }}
+                        className="relative cursor-pointer group/prof flex-shrink-0"
+                        title="Click to view payment QR code & profile"
+                      >
+                        <img
+                          src={memberUser?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${memberUser?.name || m.userId}`}
+                          alt={memberUser?.name || 'Member'}
+                          className="w-10 h-10 rounded-full object-cover border border-slate-200 group-hover/prof:ring-2 ring-indigo-500 transition"
+                        />
+                        <div className="absolute -bottom-1 -right-1 bg-indigo-600 text-white p-0.5 rounded-full shadow-xs">
+                          <QrCode className="w-2.5 h-2.5" />
+                        </div>
+                      </div>
+
                       <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-slate-900 text-sm">
-                            {memberUser?.name || 'Unknown'} {isCurrent && '(You)'}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span
+                            onClick={() => {
+                              const profile: User = memberUser || {
+                                id: m.userId,
+                                name: memberUser?.name || 'Member',
+                                email: memberUser?.email || '',
+                                avatarUrl: memberUser?.avatarUrl || '',
+                                phone: memberUser?.phone,
+                                qrCodeUrl: memberUser?.qrCodeUrl,
+                                upiId: memberUser?.upiId
+                              };
+                              setSelectedMemberProfile(profile);
+                            }}
+                            className="font-semibold text-slate-900 text-sm hover:text-indigo-600 cursor-pointer transition flex items-center gap-1.5"
+                            title="Click to view payment QR code & profile"
+                          >
+                            <span>{memberUser?.name || 'Unknown'} {isCurrent && '(You)'}</span>
                           </span>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const profile: User = memberUser || {
+                                id: m.userId,
+                                name: memberUser?.name || 'Member',
+                                email: memberUser?.email || '',
+                                avatarUrl: memberUser?.avatarUrl || '',
+                                phone: memberUser?.phone,
+                                qrCodeUrl: memberUser?.qrCodeUrl,
+                                upiId: memberUser?.upiId
+                              };
+                              setSelectedMemberProfile(profile);
+                            }}
+                            className="px-2 py-0.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[10px] font-bold flex items-center gap-1 transition cursor-pointer border border-indigo-200/60"
+                            title="View Payment QR Code"
+                          >
+                            <QrCode className="w-3 h-3 text-indigo-600" />
+                            <span>QR Code</span>
+                          </button>
+
                           {m.role === 'admin' && (
                             <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">
                               Admin
@@ -1487,6 +1602,20 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
           onSuccess={(newCode) => {
             onRefresh();
           }}
+        />
+      )}
+
+      {/* Member Payment QR Code Profile Modal */}
+      {selectedMemberProfile && (
+        <MemberProfileModal
+          isOpen={Boolean(selectedMemberProfile)}
+          onClose={() => setSelectedMemberProfile(null)}
+          member={selectedMemberProfile}
+          onOpenSettle={(receiverId) => {
+            setSelectedMemberProfile(null);
+            onOpenSettleUp(group.id, user?.id, receiverId);
+          }}
+          currency={currency}
         />
       )}
     </div>

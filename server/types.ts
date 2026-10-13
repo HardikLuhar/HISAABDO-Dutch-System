@@ -13,6 +13,8 @@ export interface User {
   phone?: string;
   preferredCurrency: CurrencyCode;
   securityQuestionsSet?: boolean;
+  qrCodeUrl?: string;
+  upiId?: string;
   createdAt: string;
 }
 
@@ -145,4 +147,25 @@ export interface ChatMessage {
   userId: string;
   message: string;
   createdAt: string;
+}
+
+export interface SettlementClaim {
+  id: string;
+  payerId: string;
+  payerName: string;
+  payerAvatar: string;
+  receiverId: string;
+  receiverName: string;
+  totalAmount: number;
+  paymentMethod: 'QR' | 'CASH';
+  groupDebts: Array<{
+    groupId: string;
+    groupName: string;
+    amount: number;
+    currency: CurrencyCode;
+  }>;
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED';
+  rejectionReason?: string;
+  createdAt: string;
+  updatedAt: string;
 }

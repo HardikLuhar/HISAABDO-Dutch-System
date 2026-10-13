@@ -24,8 +24,8 @@ import {
 interface DashboardProps {
   groups: GroupItem[];
   activities: ActivityItem[];
-  activeTab?: 'home' | 'groups' | 'activity';
-  onSelectTab?: (tab: 'home' | 'groups' | 'activity') => void;
+  activeTab?: 'home' | 'groups' | 'summary' | 'activity';
+  onSelectTab?: (tab: 'home' | 'groups' | 'summary' | 'activity') => void;
   onSelectGroup: (groupId: string) => void;
   onOpenAddExpense: () => void;
   onOpenCreateGroup: () => void;
@@ -479,6 +479,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
             <span>Settle Up</span>
           </button>
+          {onSelectTab && (
+            <button
+              onClick={() => onSelectTab('summary')}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-200 font-semibold text-xs sm:text-sm backdrop-blur border border-indigo-400/30 transition cursor-pointer"
+              id="dashboard-total-summary-hero-btn"
+              title="Consolidated Cross-Group Debts"
+            >
+              <Receipt className="w-4 h-4 text-indigo-300" />
+              <span>Total Summary</span>
+            </button>
+          )}
           <button
             onClick={onOpenCreateGroup}
             className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-xs sm:text-sm backdrop-blur border border-white/10 transition cursor-pointer"

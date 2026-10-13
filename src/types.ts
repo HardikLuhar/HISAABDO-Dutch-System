@@ -12,6 +12,8 @@ export interface User {
   phone?: string;
   preferredCurrency: CurrencyCode;
   securityQuestionsSet?: boolean;
+  qrCodeUrl?: string;
+  upiId?: string;
   createdAt: string;
 }
 
@@ -22,6 +24,8 @@ export interface GroupMemberInfo {
   avatarUrl: string;
   role: 'admin' | 'member';
   memberPasscode?: string;
+  qrCodeUrl?: string;
+  upiId?: string;
 }
 
 export interface GroupItem {
@@ -190,4 +194,25 @@ export interface ChatMessageItem {
   userAvatar: string;
   message: string;
   createdAt: string;
+}
+
+export interface SettlementClaim {
+  id: string;
+  payerId: string;
+  payerName: string;
+  payerAvatar: string;
+  receiverId: string;
+  receiverName: string;
+  totalAmount: number;
+  paymentMethod: 'QR' | 'CASH';
+  groupDebts: Array<{
+    groupId: string;
+    groupName: string;
+    amount: number;
+    currency: CurrencyCode;
+  }>;
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED';
+  rejectionReason?: string;
+  createdAt: string;
+  updatedAt: string;
 }

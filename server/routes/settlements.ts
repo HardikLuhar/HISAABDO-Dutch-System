@@ -126,7 +126,7 @@ settlementsRouter.post('/:groupId/settlements', requireAuth, async (req: any, re
       userName: req.user.name,
       userAvatar: req.user.avatarUrl,
       action: 'RECORDED_SETTLEMENT',
-      description: `${receiver ? receiver.name : 'Unknown'} marked ${group.defaultCurrency} ${settleAmount} settled from ${payer ? payer.name : 'Unknown'}`,
+      description: `${receiver ? receiver.name : 'Unknown'} marked ${group.defaultCurrency} ${settleAmount} settled from ${payer ? payer.name : 'Unknown'} in group "${group.name}"`,
       amount: settleAmount,
       currency: group.defaultCurrency,
       createdAt: new Date().toISOString()

@@ -209,7 +209,7 @@ expensesRouter.post('/:groupId/expenses', requireAuth, async (req: any, res) => 
       userName: req.user.name,
       userAvatar: req.user.avatarUrl,
       action: 'CREATED_EXPENSE',
-      description: `${req.user.name} added "${newExpense.description}" (${group.defaultCurrency} ${newExpense.amount})`,
+      description: `${req.user.name} added "${newExpense.description}" (${group.defaultCurrency} ${newExpense.amount}) in group "${group.name}". Paid by: ${payerNames.join(', ')}. Split among ${splitResult.splits.length} member(s).`,
       amount: totalAmount,
       currency: group.defaultCurrency,
       createdAt: new Date().toISOString()
@@ -331,7 +331,7 @@ expensesRouter.put('/:groupId/expenses/:id', requireAuth, async (req: any, res) 
       userName: req.user.name,
       userAvatar: req.user.avatarUrl,
       action: 'UPDATED_EXPENSE',
-      description: `${req.user.name} updated "${updated?.description}"`,
+      description: `${req.user.name} updated expense "${updated?.description}" (${existing.currency} ${totalAmount}) in group "${group?.name || 'Unknown'}". Original amount was ${existing.currency} ${existing.amount}.`,
       amount: totalAmount,
       currency: existing.currency,
       createdAt: new Date().toISOString()
@@ -404,7 +404,7 @@ expensesRouter.delete('/:groupId/expenses/:id', requireAuth, async (req: any, re
       userName: req.user.name,
       userAvatar: req.user.avatarUrl,
       action: 'DELETED_EXPENSE',
-      description: `${req.user.name} deleted expense "${existing.description}"`,
+      description: `${req.user.name} deleted expense "${existing.description}" (${existing.currency} ${existing.amount}) from group "${group?.name || 'Unknown'}"`,
       amount: existing.amount,
       currency: existing.currency,
       createdAt: new Date().toISOString()

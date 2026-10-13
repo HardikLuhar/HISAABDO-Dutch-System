@@ -166,15 +166,21 @@ notificationsRouter.post('/remind', requireAuth, async (req: any, res) => {
   }
 });
 
-// Activity feed
+// Activity feed (Admin-only: only Hardik can view the full activity log)
 export const activityRouter = Router();
 
 activityRouter.get('/', requireAuth, async (req: any, res) => {
   try {
+    // Only site admin (Hardik) can view activities
+    const { checkIsSiteAdmin } = await import('./groups.js');
+    if (!checkIsSiteAdmin(req.user)) {
+      return res.json({ activities: [] });
+    }
+
     const { groupId, limit } = req.query;
     const activities = await db.getActivities(
       typeof groupId === 'string' ? groupId : undefined,
-      limit ? Number(limit) : 25
+      limit ? Number(limit) : 50
     );
     return res.json({ activities });
   } catch (err: any) {

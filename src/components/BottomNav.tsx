@@ -5,12 +5,14 @@ interface BottomNavProps {
   currentTab: 'home' | 'groups' | 'activity' | 'profile';
   onSelectTab: (tab: 'home' | 'groups' | 'activity' | 'profile') => void;
   onOpenAddExpense: () => void;
+  isAdmin?: boolean;
 }
 
 export const BottomNav: React.FC<BottomNavProps> = ({
   currentTab,
   onSelectTab,
-  onOpenAddExpense
+  onOpenAddExpense,
+  isAdmin = false
 }) => {
   return (
     <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-t border-slate-200 dark:border-slate-800 px-4 py-1.5 flex items-center justify-around shadow-lg transition-colors">
@@ -50,18 +52,21 @@ export const BottomNav: React.FC<BottomNavProps> = ({
         <Plus className="w-6 h-6" />
       </button>
 
-      <button
-        onClick={() => onSelectTab('activity')}
-        className={`flex flex-col items-center py-1 px-2 text-[10px] font-medium transition cursor-pointer ${
-          currentTab === 'activity'
-            ? 'text-emerald-600 dark:text-emerald-400 font-bold'
-            : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-        }`}
-        id="bottom-nav-activity-btn"
-      >
-        <Clock className="w-5 h-5 mb-0.5" />
-        <span>Activity</span>
-      </button>
+      {/* Activity tab - Admin only */}
+      {isAdmin && (
+        <button
+          onClick={() => onSelectTab('activity')}
+          className={`flex flex-col items-center py-1 px-2 text-[10px] font-medium transition cursor-pointer ${
+            currentTab === 'activity'
+              ? 'text-amber-600 dark:text-amber-400 font-bold'
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+          }`}
+          id="bottom-nav-activity-btn"
+        >
+          <Clock className="w-5 h-5 mb-0.5" />
+          <span>Activity</span>
+        </button>
+      )}
 
       <button
         onClick={() => onSelectTab('profile')}

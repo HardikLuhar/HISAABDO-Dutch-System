@@ -32,6 +32,7 @@ interface DashboardProps {
   onOpenSettleUp: (groupId?: string) => void;
   onOpenJoinGroup: () => void;
   onOpenBalanceDetail?: (viewType: 'owed' | 'owe') => void;
+  isAdmin?: boolean;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
@@ -44,7 +45,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onOpenCreateGroup,
   onOpenSettleUp,
   onOpenJoinGroup,
-  onOpenBalanceDetail
+  onOpenBalanceDetail,
+  isAdmin = false
 }) => {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
@@ -272,35 +274,45 @@ export const Dashboard: React.FC<DashboardProps> = ({
     );
   }
 
-  // Render dedicated Activity tab view
+  // Render dedicated Activity tab view (Admin-only)
   if (activeTab === 'activity') {
+    // Only admin (Hardik) can see the activity feed
+    if (!isAdmin) {
+      // Non-admin users: silently redirect to home tab
+      if (onSelectTab) onSelectTab('home');
+      return null;
+    }
+
     return (
       <div className="space-y-6 pb-16 transition-colors">
         {/* Activity Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-slate-900 via-slate-800 to-amber-950 p-6 rounded-2xl text-white shadow-xl">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-                Activity Feed
+              <h1 className="text-2xl font-extrabold tracking-tight">
+                Admin Activity Log
               </h1>
-              <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 text-xs font-bold">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-xs font-bold border border-amber-500/30">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
                 <span>Live Feed</span>
               </span>
+              <span className="px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 text-[10px] font-bold border border-indigo-500/30">
+                🛡️ Admin Only
+              </span>
             </div>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-              Live record of all expenses, settlements, and member updates across your groups.
+            <p className="text-sm text-slate-300 mt-1">
+              Complete audit trail — every expense, settlement, edit, deletion, and member action across all groups.
             </p>
           </div>
 
           {/* Activity Filters */}
-          <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
+          <div className="flex flex-wrap items-center gap-1.5 p-1 bg-white/10 rounded-xl backdrop-blur">
             <button
               onClick={() => setActivityFilter('ALL')}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
                 activityFilter === 'ALL'
-                  ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  ? 'bg-white/20 text-white shadow-xs'
+                  : 'text-slate-300 hover:text-white'
               }`}
             >
               All ({activities.length})
@@ -309,31 +321,31 @@ export const Dashboard: React.FC<DashboardProps> = ({
               onClick={() => setActivityFilter('EXPENSE')}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
                 activityFilter === 'EXPENSE'
-                  ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  ? 'bg-white/20 text-white shadow-xs'
+                  : 'text-slate-300 hover:text-white'
               }`}
             >
-              Expenses
+              💰 Expenses
             </button>
             <button
               onClick={() => setActivityFilter('SETTLEMENT')}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
                 activityFilter === 'SETTLEMENT'
-                  ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  ? 'bg-white/20 text-white shadow-xs'
+                  : 'text-slate-300 hover:text-white'
               }`}
             >
-              Settlements
+              ✅ Settlements
             </button>
             <button
               onClick={() => setActivityFilter('REMINDER')}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
                 activityFilter === 'REMINDER'
-                  ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  ? 'bg-white/20 text-white shadow-xs'
+                  : 'text-slate-300 hover:text-white'
               }`}
             >
-              Reminders
+              🔔 Reminders
             </button>
           </div>
         </div>
@@ -346,7 +358,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             placeholder="Search activities by user or description..."
             value={activitySearch}
             onChange={(e) => setActivitySearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+            className="w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
             id="activity-search-input"
           />
         </div>
@@ -364,33 +376,38 @@ export const Dashboard: React.FC<DashboardProps> = ({
               </p>
             </div>
           ) : (
-            <div className="space-y-4 divide-y divide-slate-100 dark:divide-slate-800">
+            <div className="space-y-0 divide-y divide-slate-100 dark:divide-slate-800">
               {filteredActivities.map((act) => {
                 const groupObj = groups.find(g => g.id === act.groupId);
+                // Action-specific styling
+                const actionConfig = {
+                  'CREATED_EXPENSE': { icon: '💰', label: 'Added Expense', bg: 'bg-blue-100 dark:bg-blue-950/60', text: 'text-blue-700 dark:text-blue-300', border: 'border-l-blue-500' },
+                  'UPDATED_EXPENSE': { icon: '✏️', label: 'Updated Expense', bg: 'bg-amber-100 dark:bg-amber-950/60', text: 'text-amber-700 dark:text-amber-300', border: 'border-l-amber-500' },
+                  'DELETED_EXPENSE': { icon: '🗑️', label: 'Deleted Expense', bg: 'bg-rose-100 dark:bg-rose-950/60', text: 'text-rose-700 dark:text-rose-300', border: 'border-l-rose-500' },
+                  'RECORDED_SETTLEMENT': { icon: '✅', label: 'Settled Up', bg: 'bg-emerald-100 dark:bg-emerald-950/60', text: 'text-emerald-700 dark:text-emerald-300', border: 'border-l-emerald-500' },
+                  'JOINED_GROUP': { icon: '👋', label: 'Joined Group', bg: 'bg-purple-100 dark:bg-purple-950/60', text: 'text-purple-700 dark:text-purple-300', border: 'border-l-purple-500' },
+                  'SENT_REMINDER': { icon: '🔔', label: 'Payment Reminder', bg: 'bg-orange-100 dark:bg-orange-950/60', text: 'text-orange-700 dark:text-orange-300', border: 'border-l-orange-500' },
+                }[act.action] || { icon: '📋', label: 'Action', bg: 'bg-slate-100 dark:bg-slate-800', text: 'text-slate-600 dark:text-slate-400', border: 'border-l-slate-500' };
+
                 return (
-                  <div key={act.id} className="pt-4 first:pt-0 flex items-start gap-3.5">
+                  <div key={act.id} className={`py-4 first:pt-0 last:pb-0 flex items-start gap-3.5 pl-3 border-l-[3px] ${actionConfig.border}`}>
                     <img
                       src={act.userAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${act.userName}`}
                       alt={act.userName}
-                      className="w-10 h-10 rounded-full object-cover border border-slate-200 dark:border-slate-700 flex-shrink-0 mt-0.5 shadow-xs"
+                      className="w-10 h-10 rounded-full object-cover border-2 border-slate-200 dark:border-slate-700 flex-shrink-0 mt-0.5 shadow-sm"
                     />
                     <div className="flex-1 min-w-0">
-                      <div className="flex flex-wrap items-baseline gap-1.5">
+                      <div className="flex flex-wrap items-center gap-1.5">
                         <span className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm">{act.userName}</span>
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                          act.action === 'CREATED_EXPENSE'
-                            ? 'bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300'
-                            : act.action === 'RECORDED_SETTLEMENT'
-                            ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300'
-                            : act.action === 'SENT_REMINDER'
-                            ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300'
-                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                        }`}>
-                          {act.action === 'CREATED_EXPENSE' ? 'Added Expense' :
-                           act.action === 'RECORDED_SETTLEMENT' ? 'Settled Up' :
-                           act.action === 'SENT_REMINDER' ? 'Payment Reminder' :
-                           act.action === 'JOINED_GROUP' ? 'Joined Group' : 'Updated'}
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${actionConfig.bg} ${actionConfig.text}`}>
+                          <span>{actionConfig.icon}</span>
+                          <span>{actionConfig.label}</span>
                         </span>
+                        {act.amount && act.currency && (
+                          <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[10px] font-bold text-slate-700 dark:text-slate-300">
+                            {act.currency} {act.amount.toLocaleString()}
+                          </span>
+                        )}
                       </div>
 
                       <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 mt-1 leading-relaxed">
@@ -411,7 +428,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                             onClick={() => onSelectGroup(groupObj.id)}
                             className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 hover:underline font-medium cursor-pointer"
                           >
-                            <span>Group: {groupObj.name}</span>
+                            <span>📁 {groupObj.name}</span>
                             <ArrowUpRight className="w-3 h-3" />
                           </button>
                         )}

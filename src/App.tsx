@@ -47,6 +47,14 @@ function HisaabdoMain() {
   const { user, isLoading: authLoading } = useAuth();
   const { showToast } = useNotification();
 
+  // Determine if current user is site admin (Hardik)
+  const isHardik = Boolean(
+    user && (
+      (user.name && user.name.trim().toLowerCase() === 'hardik') ||
+      (user.email && user.email.toLowerCase().includes('hardik'))
+    )
+  );
+
   // Primary data state (Cache-first for instant 0ms initial load)
   const [groups, setGroups] = useState<GroupItem[]>(() => {
     try {
@@ -155,15 +163,20 @@ function HisaabdoMain() {
   // Load all initial data (Stale-While-Revalidate)
   const loadDashboardData = useCallback(async () => {
     try {
+      // Only fetch activities for admin (Hardik) — other users get empty array from server anyway
       const [groupsData, actsData] = await Promise.all([
         api.getGroups(),
-        api.getActivities(undefined, 20)
+        isHardik ? api.getActivities(undefined, 50) : Promise.resolve([])
       ]);
       setGroups(groupsData);
       setActivities(actsData);
       try {
         localStorage.setItem('hisaabdo_cached_groups', JSON.stringify(groupsData));
-        localStorage.setItem('hisaabdo_cached_activities', JSON.stringify(actsData));
+        if (isHardik) {
+          localStorage.setItem('hisaabdo_cached_activities', JSON.stringify(actsData));
+        } else {
+          localStorage.removeItem('hisaabdo_cached_activities');
+        }
       } catch {
         // ignore
       }
@@ -182,7 +195,7 @@ function HisaabdoMain() {
     } finally {
       setIsLoadingData(false);
     }
-  }, []);
+  }, [isHardik]);
 
   // Load single group details with cache-first strategy
   const loadGroupDetails = useCallback(async (groupId: string, forceRefresh = false) => {
@@ -561,6 +574,7 @@ function HisaabdoMain() {
               setBalanceViewType(viewType);
               setIsBalanceDetailOpen(true);
             }}
+            isAdmin={isHardik}
           />
         )}
       </main>
@@ -578,6 +592,7 @@ function HisaabdoMain() {
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
         onOpenAddExpense={() => handleOpenAddExpense()}
+        isAdmin={isHardik}
       />
 
       {/* ALL MODALS */}

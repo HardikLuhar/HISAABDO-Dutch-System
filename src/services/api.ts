@@ -39,10 +39,18 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(endpoint, {
-    ...options,
-    headers
-  });
+  let response: Response;
+  try {
+    response = await fetch(endpoint, {
+      ...options,
+      headers
+    });
+  } catch (err: any) {
+    if (err?.name === 'TypeError' || err?.message?.includes('fetch')) {
+      throw new Error('Cannot connect to server. Please ensure the backend server is running.');
+    }
+    throw err;
+  }
 
   const data = await response.json().catch(() => ({}));
 
@@ -293,7 +301,7 @@ export const api = {
   async createSettlementClaim(data: {
     receiverId: string;
     totalAmount: number;
-    paymentMethod: 'QR' | 'CASH';
+    paymentMethod: 'UPI' | 'QR' | 'CASH';
     groupDebts: Array<{
       groupId: string;
       groupName: string;

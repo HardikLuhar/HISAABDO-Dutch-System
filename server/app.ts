@@ -32,6 +32,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/groups', groupsRouter);
 app.use('/api/groups', expensesRouter);
 app.use('/api/groups', settlementsRouter);
+app.use('/api/settlements', settlementsRouter);
 app.use('/api/groups', chatRouter);
 app.use('/api/analytics', analyticsRouter);
 app.use('/api/notifications', notificationsRouter);

@@ -3,7 +3,7 @@ import { CurrencyCode } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import { useTheme } from '../context/ThemeContext';
-import { X, User, Phone, Mail, DollarSign, Image, Moon, Sun, Check, Sparkles, RefreshCw, ChevronDown, ChevronUp, QrCode, Upload, Trash2 } from 'lucide-react';
+import { X, User, Phone, Mail, DollarSign, Image, Moon, Sun, Check, Sparkles, RefreshCw, ChevronDown, ChevronUp, CreditCard } from 'lucide-react';
 
 interface UserProfileModalProps {
   isOpen: boolean;
@@ -86,7 +86,6 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   const [phone, setPhone] = useState(user?.phone || '');
   const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl || '');
   const [preferredCurrency, setPreferredCurrency] = useState<CurrencyCode>(user?.preferredCurrency || 'INR');
-  const [qrCodeUrl, setQrCodeUrl] = useState(user?.qrCodeUrl || '');
   const [upiId, setUpiId] = useState(user?.upiId || '');
   const [isSaving, setIsSaving] = useState(false);
   const [avatarCategory, setAvatarCategory] = useState<'all' | 'people' | 'anime' | 'robots' | 'emoji'>('all');
@@ -103,21 +102,6 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
     }));
     setAvatarList(shuffled);
     showToast('Generated fresh avatar styles!', 'info');
-  };
-
-  const handleQrUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      showToast('QR Code image must be smaller than 5MB', 'error');
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => {
-      setQrCodeUrl(reader.result as string);
-      showToast('QR Code image selected!', 'success');
-    };
-    reader.readAsDataURL(file);
   };
 
   const filteredAvatars = avatarCategory === 'all'
@@ -138,10 +122,9 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
         phone: phone.trim(),
         avatarUrl: avatarUrl.trim(),
         preferredCurrency,
-        qrCodeUrl: qrCodeUrl.trim(),
         upiId: upiId.trim()
       });
-      showToast('Profile and Payment QR code updated successfully!', 'success');
+      showToast('Profile and UPI payment ID updated successfully!', 'success');
       onClose();
     } catch (err: any) {
       showToast(err.message || 'Failed to update profile', 'error');
@@ -312,16 +295,16 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
             </select>
           </div>
 
-          {/* Payment QR Code & UPI Details (Used for instant settlement) */}
-          <div className="p-3.5 bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800/60 rounded-2xl space-y-3">
+          {/* UPI Payment Details (Used for instant settlement) */}
+          <div className="p-4 bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800/60 rounded-2xl space-y-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 flex items-center justify-center">
-                  <QrCode className="w-4 h-4" />
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 flex items-center justify-center">
+                  <CreditCard className="w-4 h-4" />
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-slate-900 dark:text-white">Payment QR Code & UPI</h4>
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400">Other members will scan this to pay you</p>
+                  <h4 className="text-xs font-bold text-slate-900 dark:text-white">UPI Payment ID</h4>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400">Members will copy or launch their UPI app to pay you</p>
                 </div>
               </div>
             </div>
@@ -338,47 +321,9 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                 onChange={(e) => setUpiId(e.target.value)}
                 className="w-full p-2.5 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-500/20 font-mono"
               />
-            </div>
-
-            {/* QR Code Photo Upload */}
-            <div>
-              <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Upload QR Code Photo (PhonePe / GPay / Paytm)
-              </label>
-
-              {qrCodeUrl ? (
-                <div className="flex items-center gap-3 p-2 bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-800 rounded-xl">
-                  <img
-                    src={qrCodeUrl}
-                    alt="Your Payment QR"
-                    className="w-16 h-16 rounded-lg object-contain bg-slate-50 border border-slate-200 dark:border-slate-800"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-slate-900 dark:text-white truncate">QR Code Active</p>
-                    <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">Ready for others to scan & pay</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setQrCodeUrl('')}
-                    className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition cursor-pointer"
-                    title="Remove QR code"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              ) : (
-                <label className="flex flex-col items-center justify-center p-3 border-2 border-dashed border-indigo-200 dark:border-indigo-800 hover:border-indigo-400 rounded-xl bg-white/70 dark:bg-slate-900/70 cursor-pointer transition">
-                  <Upload className="w-5 h-5 text-indigo-500 mb-1" />
-                  <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">Click to upload QR image</span>
-                  <span className="text-[10px] text-slate-400">PNG, JPG, or WEBP up to 5MB</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleQrUpload}
-                    className="hidden"
-                  />
-                </label>
-              )}
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
+                When other members settle up with you, they can tap <strong>Launch UPI App</strong> or copy your UPI ID to pay instantly via Google Pay, PhonePe, or Paytm.
+              </p>
             </div>
           </div>
 

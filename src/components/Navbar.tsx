@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import { useTheme } from '../context/ThemeContext';
-import { Bell, Plus, Users, User as UserIcon, LogOut, ChevronDown, Check, ArrowRightLeft, Sparkles, Sun, Moon, Smartphone, Receipt } from 'lucide-react';
+import { Bell, Plus, Users, User as UserIcon, LogOut, ChevronDown, Check, ArrowRightLeft, Sparkles, Sun, Moon, Smartphone, Receipt, Clock } from 'lucide-react';
 import { CURRENCY_SYMBOLS } from '../utils/formatters';
 
 interface NavbarProps {
@@ -12,6 +12,8 @@ interface NavbarProps {
   onOpenAuth: () => void;
   onNavigateHome: () => void;
   onOpenSummary?: () => void;
+  onOpenActivity?: () => void;
+  isAdmin?: boolean;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -20,7 +22,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenProfile,
   onOpenAuth,
   onNavigateHome,
-  onOpenSummary
+  onOpenSummary,
+  onOpenActivity,
+  isAdmin = false
 }) => {
   const { user, logout } = useAuth();
   const {
@@ -100,6 +104,19 @@ export const Navbar: React.FC<NavbarProps> = ({
                 >
                   <Receipt className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
                   <span>Total Summary</span>
+                </button>
+              )}
+
+              {/* Admin Activity Feed Quick CTA (Admin Only) */}
+              {isAdmin && onOpenActivity && (
+                <button
+                  onClick={onOpenActivity}
+                  className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-300/80 dark:border-amber-700/60 bg-amber-50/80 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/40 text-amber-900 dark:text-amber-200 text-xs font-bold transition cursor-pointer"
+                  id="navbar-activity-btn"
+                  title="Admin Live Activity Feed"
+                >
+                  <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                  <span>Activity Feed</span>
                 </button>
               )}
 
@@ -273,6 +290,20 @@ export const Navbar: React.FC<NavbarProps> = ({
                         >
                           <Receipt className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
                           <span>Total Summary</span>
+                        </button>
+                      )}
+
+                      {isAdmin && onOpenActivity && (
+                        <button
+                          onClick={() => {
+                            setShowUserMenu(false);
+                            onOpenActivity();
+                          }}
+                          className="w-full flex items-center gap-2.5 px-3.5 py-2 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 cursor-pointer font-semibold"
+                          id="menu-activity-btn"
+                        >
+                          <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                          <span>Admin Activity Feed</span>
                         </button>
                       )}
 

@@ -533,6 +533,12 @@ function HisaabdoMain() {
           setSelectedGroupId(null);
           setMobileTab('summary');
         }}
+        onOpenActivity={() => {
+          setSelectedGroupId(null);
+          setMobileTab('activity');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+        isAdmin={isHardik}
       />
 
       {/* Main Content Area */}

@@ -70,7 +70,23 @@ export const BottomNav: React.FC<BottomNavProps> = ({
         <span className="truncate">Summary</span>
       </button>
 
-      {/* 5. Profile */}
+      {/* 5. Admin Activity Feed (Admin Only) */}
+      {isAdmin && (
+        <button
+          onClick={() => onSelectTab('activity')}
+          className={`flex-1 flex flex-col items-center py-1 px-1 text-[10px] font-medium transition cursor-pointer ${
+            currentTab === 'activity'
+              ? 'text-amber-600 dark:text-amber-400 font-bold'
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+          }`}
+          id="bottom-nav-activity-btn"
+        >
+          <Clock className="w-5 h-5 mb-0.5" />
+          <span className="truncate">Activity</span>
+        </button>
+      )}
+
+      {/* 6. Profile */}
       <button
         onClick={() => onSelectTab('profile')}
         className={`flex-1 flex flex-col items-center py-1 px-1 text-[10px] font-medium transition cursor-pointer ${

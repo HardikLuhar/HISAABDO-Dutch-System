@@ -10,8 +10,8 @@ const DATA_DIR = path.resolve(__dirname, '../data');
 const USER_META_FILE = path.join(DATA_DIR, 'user_meta.json');
 const CLAIMS_FILE = path.join(DATA_DIR, 'settlement_claims.json');
 
-// In-memory + persisted storage for extra user profile fields (QR code, UPI ID)
-const userExtraMeta = new Map<string, { qrCodeUrl?: string; upiId?: string }>();
+// In-memory + persisted storage for extra user profile fields (UPI ID)
+const userExtraMeta = new Map<string, { upiId?: string }>();
 function loadUserMeta() {
   try {
     if (fs.existsSync(USER_META_FILE)) {
@@ -75,7 +75,6 @@ function rowToUser(row: any): User {
     phone: row.phone ?? undefined,
     preferredCurrency: row.preferred_currency ?? 'INR',
     securityQuestionsSet: row.security_questions_set ?? false,
-    qrCodeUrl: row.qr_code_url ?? extra.qrCodeUrl ?? undefined,
     upiId: row.upi_id ?? extra.upiId ?? undefined,
     createdAt: row.created_at,
   };
@@ -310,10 +309,9 @@ class Database {
   async updateUser(id: string, updates: Partial<User>): Promise<User | null> {
     this.invalidateUsersCache();
     // Persist extra fields in userExtraMeta
-    if (updates.qrCodeUrl !== undefined || updates.upiId !== undefined) {
+    if (updates.upiId !== undefined) {
       const extra = userExtraMeta.get(id) || {};
-      if (updates.qrCodeUrl !== undefined) extra.qrCodeUrl = updates.qrCodeUrl;
-      if (updates.upiId !== undefined) extra.upiId = updates.upiId;
+      extra.upiId = updates.upiId;
       userExtraMeta.set(id, extra);
       saveUserMeta();
     }
@@ -326,7 +324,6 @@ class Database {
     if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
     if (updates.preferredCurrency !== undefined) dbUpdates.preferred_currency = updates.preferredCurrency;
     if (updates.securityQuestionsSet !== undefined) dbUpdates.security_questions_set = updates.securityQuestionsSet;
-    if (updates.qrCodeUrl !== undefined) dbUpdates.qr_code_url = updates.qrCodeUrl;
     if (updates.upiId !== undefined) dbUpdates.upi_id = updates.upiId;
 
     let { data, error } = await supabase
@@ -337,8 +334,7 @@ class Database {
       .maybeSingle();
 
     if (error) {
-      // If column doesn't exist in Supabase schema cache, retry without qr_code_url / upi_id
-      delete dbUpdates.qr_code_url;
+      // If column doesn't exist in Supabase schema cache, retry without upi_id
       delete dbUpdates.upi_id;
       const retry = await supabase
         .from('users')

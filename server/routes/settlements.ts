@@ -176,7 +176,10 @@ settlementsRouter.post('/claims', requireAuth, async (req: any, res) => {
       return res.status(400).json({ error: 'You cannot submit a settlement claim to yourself.' });
     }
 
-    const receiver = await db.getUserById(receiverId);
+    let receiver = await db.getUserById(receiverId);
+    if (!receiver) {
+      receiver = (await db.getUsers()).find(u => u.id === receiverId);
+    }
     if (!receiver) {
       return res.status(404).json({ error: 'Receiver user not found.' });
     }
@@ -190,14 +193,14 @@ settlementsRouter.post('/claims', requireAuth, async (req: any, res) => {
       receiverId,
       receiverName: receiver.name,
       totalAmount: round2(Number(totalAmount)),
-      paymentMethod: paymentMethod === 'CASH' ? 'CASH' : 'QR',
+      paymentMethod: paymentMethod === 'CASH' ? 'CASH' : 'UPI',
       groupDebts,
       status: 'PENDING',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     });
 
-    const methodLabel = paymentMethod === 'CASH' ? 'Cash' : 'QR Code';
+    const methodLabel = paymentMethod === 'CASH' ? 'Cash' : 'UPI';
     const groupNames = groupDebts.map((g: any) => g.groupName).join(', ');
     const claimMessage = `🔔 ${req.user.name} claims to have paid you ₹${totalAmount} via ${methodLabel} to settle debts in [${groupNames}]. Please confirm receipt!`;
 
@@ -205,7 +208,7 @@ settlementsRouter.post('/claims', requireAuth, async (req: any, res) => {
     await db.createNotification({
       id: `notif_${Date.now()}`,
       userId: receiverId,
-      type: 'PAYMENT_REMINDER',
+      type: 'SETTLEMENT_CLAIM',
       title: 'Payment Verification Request',
       message: claimMessage,
       relatedId: claimId,
@@ -273,7 +276,7 @@ settlementsRouter.post('/claims/:id/accept', requireAuth, async (req: any, res) 
           amount: round2(Number(gd.amount)),
           currency: gd.currency || group.defaultCurrency || 'INR',
           date: new Date().toISOString().split('T')[0],
-          notes: `Verified settlement (${claim.paymentMethod === 'CASH' ? 'Cash' : 'QR'}) across multi-group claim`,
+          notes: `Verified settlement (${claim.paymentMethod === 'CASH' ? 'Cash' : 'UPI'}) across multi-group claim`,
           createdAt: new Date().toISOString()
         });
 
@@ -302,7 +305,7 @@ settlementsRouter.post('/claims/:id/accept', requireAuth, async (req: any, res) 
 
     // Notify payer that receiver accepted!
     const groupList = claim.groupDebts.map(g => g.groupName).join(', ');
-    const acceptedMsg = `🤝 ${req.user.name} confirmed receipt of ₹${claim.totalAmount} (${claim.paymentMethod === 'CASH' ? 'Cash' : 'QR'}). Debts in [${groupList}] are now completely settled!`;
+    const acceptedMsg = `🤝 ${req.user.name} confirmed receipt of ₹${claim.totalAmount} (${claim.paymentMethod === 'CASH' ? 'Cash' : 'UPI'}). Debts in [${groupList}] are now completely settled!`;
 
     await db.createNotification({
       id: `notif_${Date.now()}`,
@@ -350,14 +353,14 @@ settlementsRouter.post('/claims/:id/reject', requireAuth, async (req: any, res) 
     // Mark claim rejected
     await db.updateClaim(id, { status: 'REJECTED', rejectionReason: reason || 'Not received' });
 
-    // Send warning notification to payer that receiver rejected payment
-    const rejectedMsg = `❌ Payment Not Received: ${req.user.name} reported that your claimed payment of ₹${claim.totalAmount} was NOT received. Debts remain active.`;
+    // Send notification to payer that receiver rejected payment
+    const rejectedMsg = `❌ Payment is declined. ${req.user.name} ne bola paise nahi mile. Pay again or settle again.`;
 
     await db.createNotification({
       id: `notif_${Date.now()}`,
       userId: claim.payerId,
-      type: 'PAYMENT_REMINDER',
-      title: 'Payment Claim Rejected',
+      type: 'SETTLEMENT_CLAIM',
+      title: 'Payment is declined',
       message: rejectedMsg,
       relatedId: id,
       read: false,
@@ -365,7 +368,7 @@ settlementsRouter.post('/claims/:id/reject', requireAuth, async (req: any, res) 
     });
 
     await sendPushToUser(claim.payerId, {
-      title: 'Payment Claim Rejected',
+      title: 'Payment is declined',
       body: rejectedMsg,
       url: '/?tab=summary'
     });

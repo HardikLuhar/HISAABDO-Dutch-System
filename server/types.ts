@@ -97,7 +97,7 @@ export interface Settlement {
 export interface NotificationItem {
   id: string;
   userId: string;
-  type: 'EXPENSE_ADDED' | 'EXPENSE_EDITED' | 'SETTLEMENT_RECORDED' | 'GROUP_INVITE' | 'PAYMENT_REMINDER';
+  type: 'EXPENSE_ADDED' | 'EXPENSE_EDITED' | 'SETTLEMENT_RECORDED' | 'GROUP_INVITE' | 'PAYMENT_REMINDER' | 'SETTLEMENT_CLAIM';
   title: string;
   message: string;
   groupId?: string;
@@ -157,7 +157,7 @@ export interface SettlementClaim {
   receiverId: string;
   receiverName: string;
   totalAmount: number;
-  paymentMethod: 'QR' | 'CASH';
+  paymentMethod: 'UPI' | 'QR' | 'CASH';
   groupDebts: Array<{
     groupId: string;
     groupName: string;

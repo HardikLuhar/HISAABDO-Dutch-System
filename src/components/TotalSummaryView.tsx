@@ -16,7 +16,6 @@ import {
   AlertCircle,
   ArrowRight,
   ExternalLink,
-  QrCode,
   Send,
   Sparkles,
   ChevronRight,
@@ -27,7 +26,8 @@ import {
   CreditCard,
   Check,
   Banknote,
-  Copy
+  Copy,
+  Wallet
 } from 'lucide-react';
 import { MemberProfileModal } from './MemberProfileModal';
 
@@ -92,10 +92,9 @@ export const TotalSummaryView: React.FC<TotalSummaryViewProps> = ({
   // Selected contact for "Complete whole debt in one go" modal
   const [selectedContact, setSelectedContact] = useState<ContactSummary | null>(null);
   const [selectedMemberProfile, setSelectedMemberProfile] = useState<User | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<'QR' | 'CASH'>('QR');
+  const [paymentMethod, setPaymentMethod] = useState<'UPI' | 'CASH'>('UPI');
   const [copiedUpi, setCopiedUpi] = useState(false);
   const [isSettlingAll, setIsSettlingAll] = useState(false);
-  const [showQrCode, setShowQrCode] = useState(true);
   const [isSendingNotice, setIsSendingNotice] = useState(false);
 
   // Fetch all group calculations
@@ -372,8 +371,8 @@ export const TotalSummaryView: React.FC<TotalSummaryViewProps> = ({
     }
   };
 
-  // Send combined payment claim (QR or Cash) if focal user is the PAYER
-  const handleSendPaymentClaim = async (contact: ContactSummary, method: 'QR' | 'CASH') => {
+  // Send combined payment claim (UPI or Cash) if focal user is the PAYER
+  const handleSendPaymentClaim = async (contact: ContactSummary, method: 'UPI' | 'CASH') => {
     if (!user) return;
     setIsSendingNotice(true);
     try {
@@ -400,7 +399,7 @@ export const TotalSummaryView: React.FC<TotalSummaryViewProps> = ({
       });
 
       showToast(
-        `Payment claim of ${formatCurrency(debtAmount, 'INR')} (${method === 'CASH' ? 'Cash' : 'QR'}) sent to ${contact.name}! They will get an instant verification pop-up to settle all groups.`,
+        `Payment claim of ${formatCurrency(debtAmount, 'INR')} (${method === 'CASH' ? 'Cash' : 'UPI'}) sent to ${contact.name}! They will get an instant verification pop-up to settle all groups.`,
         'success'
       );
       setSelectedContact(null);
@@ -646,12 +645,11 @@ export const TotalSummaryView: React.FC<TotalSummaryViewProps> = ({
                           email: contact.email,
                           avatarUrl: contact.avatarUrl,
                           phone: contact.phone,
-                          qrCodeUrl: contact.qrCodeUrl,
                           upiId: contact.upiId
                         };
                         setSelectedMemberProfile(found as User);
                       }}
-                      title="Click to view payment profile & QR code"
+                      title="Click to view payment profile & UPI ID"
                     >
                       {contact.avatarUrl ? (
                         <img
@@ -668,7 +666,7 @@ export const TotalSummaryView: React.FC<TotalSummaryViewProps> = ({
                       <div className="min-w-0">
                         <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate flex items-center gap-1.5 group-hover/prof:text-indigo-600 dark:group-hover/prof:text-indigo-400 transition">
                           <span>{contact.name}</span>
-                          <QrCode className="w-3.5 h-3.5 text-indigo-500 flex-shrink-0" title="QR Profile Available" />
+                          <CreditCard className="w-3.5 h-3.5 text-indigo-500 flex-shrink-0" title="UPI Payment Available" />
                         </h3>
                         <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
                           {contact.email || `${contact.involvedGroupsCount} shared groups`}
@@ -976,19 +974,19 @@ export const TotalSummaryView: React.FC<TotalSummaryViewProps> = ({
                 {/* CASE B: User is the PAYER (User owes other person) -> QR or Cash payment + Instant Claim */}
                 {selectedContact.netCombined < -0.01 && focalUserId === user?.id && (
                   <div className="space-y-3">
-                    {/* Payment Method Switcher (QR Code vs Cash) */}
+                    {/* Payment Method Switcher (UPI vs Cash) */}
                     <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl">
                       <button
                         type="button"
-                        onClick={() => setPaymentMethod('QR')}
+                        onClick={() => setPaymentMethod('UPI')}
                         className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition cursor-pointer ${
-                          paymentMethod === 'QR'
+                          paymentMethod === 'UPI'
                             ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
                             : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                         }`}
                       >
-                        <QrCode className="w-4 h-4" />
-                        <span>Pay via QR Code</span>
+                        <CreditCard className="w-4 h-4" />
+                        <span>Pay via UPI</span>
                       </button>
                       <button
                         type="button"
@@ -1004,18 +1002,18 @@ export const TotalSummaryView: React.FC<TotalSummaryViewProps> = ({
                       </button>
                     </div>
 
-                    {/* METHOD 1: QR CODE PAYMENT */}
-                    {paymentMethod === 'QR' && (
-                      <div className="p-4 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 space-y-3">
+                    {/* METHOD 1: UPI PAYMENT */}
+                    {paymentMethod === 'UPI' && (
+                      <div className="p-4 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 space-y-4">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-start gap-2.5">
-                            <QrCode className="w-5 h-5 text-indigo-600 dark:text-indigo-400 flex-shrink-0 mt-0.5" />
+                            <CreditCard className="w-5 h-5 text-indigo-600 dark:text-indigo-400 flex-shrink-0 mt-0.5" />
                             <div>
                               <h5 className="text-xs font-bold text-indigo-950 dark:text-indigo-200">
-                                {selectedContact.name}'s Payment QR Code
+                                {selectedContact.name}'s UPI Payment Details
                               </h5>
                               <p className="text-[11px] text-indigo-800 dark:text-indigo-300 mt-0.5">
-                                Scan with any UPI app to pay the combined {formatCurrency(Math.abs(selectedContact.netCombined), focalCurrency)}
+                                Launch any UPI app or copy the UPI ID to pay {formatCurrency(Math.abs(selectedContact.netCombined), focalCurrency)}
                               </p>
                             </div>
                           </div>
@@ -1033,60 +1031,49 @@ export const TotalSummaryView: React.FC<TotalSummaryViewProps> = ({
                           </button>
                         </div>
 
-                        {/* QR Image Display */}
-                        <div className="flex flex-col items-center justify-center p-4 bg-white dark:bg-slate-900 rounded-2xl border border-indigo-100 dark:border-indigo-900/50 shadow-xs">
-                          <img
-                            src={
-                              selectedContact.qrCodeUrl ||
-                              `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
-                                `upi://pay?pa=${selectedContact.upiId || selectedContact.phone || selectedContact.email}&pn=${encodeURIComponent(selectedContact.name)}&am=${Math.abs(selectedContact.netCombined)}&cu=INR&tn=Hisaabdo Settlement`
-                              )}`
-                            }
-                            alt={`${selectedContact.name}'s QR Code`}
-                            className="w-48 h-48 object-contain rounded-xl"
-                          />
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 text-center">
-                            {selectedContact.qrCodeUrl ? 'Verified Personal QR Photo' : 'UPI Payment QR Code'}
-                          </p>
-                        </div>
-
-                        {/* UPI ID copy & Open App button */}
-                        <div className="flex flex-col sm:flex-row items-center gap-2">
-                          {(selectedContact.upiId || selectedContact.phone) && (
-                            <div className="w-full flex-1 flex items-center justify-between p-2 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-mono">
-                              <span className="truncate pr-1 text-slate-700 dark:text-slate-300">
-                                {selectedContact.upiId || selectedContact.phone}
+                        {/* UPI Details Box */}
+                        <div className="p-3.5 bg-white dark:bg-slate-900 rounded-2xl border border-indigo-100 dark:border-indigo-900/50 shadow-xs space-y-3">
+                          <div className="flex flex-col sm:flex-row items-center gap-2">
+                            <div className="w-full flex-1 flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-mono">
+                              <span className="truncate pr-1 text-slate-900 dark:text-white font-bold">
+                                {selectedContact.upiId || selectedContact.phone || selectedContact.email}
                               </span>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const text = selectedContact.upiId || selectedContact.phone || '';
-                                  navigator.clipboard.writeText(text);
-                                  setCopiedUpi(true);
-                                  showToast('UPI ID copied!', 'success');
-                                  setTimeout(() => setCopiedUpi(false), 2000);
-                                }}
-                                className="px-2 py-1 rounded bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400 text-[11px] font-bold flex items-center gap-1 cursor-pointer"
-                              >
-                                {copiedUpi ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                                <span>{copiedUpi ? 'Copied' : 'Copy'}</span>
-                              </button>
+                              {(selectedContact.upiId || selectedContact.phone) && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const text = selectedContact.upiId || selectedContact.phone || '';
+                                    navigator.clipboard.writeText(text);
+                                    setCopiedUpi(true);
+                                    showToast('UPI ID copied to clipboard!', 'success');
+                                    setTimeout(() => setCopiedUpi(false), 2000);
+                                  }}
+                                  className="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400 text-xs font-bold flex items-center gap-1 cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900 transition flex-shrink-0"
+                                >
+                                  {copiedUpi ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                                  <span>{copiedUpi ? 'Copied' : 'Copy'}</span>
+                                </button>
+                              )}
                             </div>
-                          )}
 
-                          <a
-                            href={`upi://pay?pa=${encodeURIComponent(selectedContact.upiId || selectedContact.phone || selectedContact.email)}&pn=${encodeURIComponent(selectedContact.name)}&am=${Math.abs(selectedContact.netCombined)}&cu=INR&tn=${encodeURIComponent('Hisaabdo Consolidated Settlement')}`}
-                            className="w-full sm:w-auto py-2.5 px-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition text-center whitespace-nowrap"
-                          >
-                            <CreditCard className="w-3.5 h-3.5" />
-                            <span>Launch UPI App</span>
-                          </a>
+                            <a
+                              href={`upi://pay?pa=${encodeURIComponent(selectedContact.upiId || selectedContact.phone || selectedContact.email)}&pn=${encodeURIComponent(selectedContact.name)}&am=${Math.abs(selectedContact.netCombined)}&cu=INR&tn=${encodeURIComponent('Hisaabdo Consolidated Settlement')}`}
+                              className="w-full sm:w-auto py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition text-center whitespace-nowrap shadow-sm shadow-indigo-600/30"
+                            >
+                              <CreditCard className="w-3.5 h-3.5" />
+                              <span>Launch UPI App</span>
+                            </a>
+                          </div>
+
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                            Open your preferred UPI app (Google Pay, PhonePe, Paytm, BHIM), complete the transfer of {formatCurrency(Math.abs(selectedContact.netCombined), focalCurrency)}, then send the claim below for instant verification.
+                          </p>
                         </div>
 
                         {/* Submit Claim Button */}
                         <button
                           type="button"
-                          onClick={() => handleSendPaymentClaim(selectedContact, 'QR')}
+                          onClick={() => handleSendPaymentClaim(selectedContact, 'UPI')}
                           disabled={isSendingNotice}
                           className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-600/30 flex items-center justify-center gap-2 transition cursor-pointer disabled:opacity-50 mt-2"
                         >
@@ -1098,7 +1085,7 @@ export const TotalSummaryView: React.FC<TotalSummaryViewProps> = ({
                           ) : (
                             <>
                               <Send className="w-4 h-4" />
-                              <span>I Paid via QR — Send Claim to {selectedContact.name}</span>
+                              <span>I Paid via UPI — Send Claim to {selectedContact.name}</span>
                             </>
                           )}
                         </button>

@@ -5,18 +5,15 @@ import { useNotification } from '../context/NotificationContext';
 import { formatCurrency } from '../utils/formatters';
 import {
   X,
-  QrCode,
   Copy,
   Check,
-  Download,
   Mail,
   Phone,
   CreditCard,
-  ExternalLink,
   ShieldCheck,
   TrendingDown,
   TrendingUp,
-  User as UserIcon
+  ExternalLink
 } from 'lucide-react';
 
 interface MemberProfileModalProps {
@@ -44,18 +41,6 @@ export const MemberProfileModal: React.FC<MemberProfileModalProps> = ({
 
   const isSelf = user?.id === member.id;
   const upiId = member.upiId || member.phone || '';
-  const qrCodeUrl = member.qrCodeUrl || '';
-
-  // Fallback dynamic UPI QR code generator URL if no custom photo uploaded
-  const generatedQrUrl = upiId
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(
-        `upi://pay?pa=${upiId}&pn=${encodeURIComponent(member.name)}&cu=INR`
-      )}`
-    : `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(
-        `upi://pay?pa=${member.email}&pn=${encodeURIComponent(member.name)}&cu=INR`
-      )}`;
-
-  const activeQr = qrCodeUrl || generatedQrUrl;
 
   const handleCopyUpi = () => {
     if (!upiId) return;
@@ -65,15 +50,7 @@ export const MemberProfileModal: React.FC<MemberProfileModalProps> = ({
     setTimeout(() => setCopiedUpi(false), 2000);
   };
 
-  const handleDownloadQr = () => {
-    const a = document.createElement('a');
-    a.href = activeQr;
-    a.download = `${member.name.replace(/\s+/g, '_')}_Payment_QR.png`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    showToast('QR Code download started', 'info');
-  };
+  const upiIntentUrl = `upi://pay?pa=${encodeURIComponent(upiId || member.email)}&pn=${encodeURIComponent(member.name)}&cu=INR&tn=${encodeURIComponent('Hisaabdo Settlement')}`;
 
   return (
     <div
@@ -88,11 +65,11 @@ export const MemberProfileModal: React.FC<MemberProfileModalProps> = ({
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-800 bg-gradient-to-r from-indigo-50 to-emerald-50 dark:from-indigo-950/40 dark:to-emerald-950/40">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
-              <QrCode className="w-4 h-4" />
+              <CreditCard className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-bold text-slate-900 dark:text-white text-base">Member Profile & QR</h3>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">Direct payment credentials</p>
+              <h3 className="font-bold text-slate-900 dark:text-white text-base">Member Payment Profile</h3>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">Direct UPI payment credentials</p>
             </div>
           </div>
           <button
@@ -155,64 +132,51 @@ export const MemberProfileModal: React.FC<MemberProfileModalProps> = ({
             </div>
           )}
 
-          {/* Scannable Payment QR Code Box */}
-          <div className="bg-slate-50 dark:bg-slate-800/60 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex flex-col items-center text-center">
-            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-              <ShieldCheck className="w-4 h-4 text-emerald-500" />
-              <span>{qrCodeUrl ? 'Verified Payment QR Code' : 'UPI Payment QR Code'}</span>
-            </span>
-
-            {/* QR Image Card */}
-            <div className="p-3 bg-white rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 flex items-center justify-center relative group">
-              <img
-                src={activeQr}
-                alt={`${member.name}'s QR Code`}
-                className="w-52 h-52 object-contain rounded-xl"
-              />
+          {/* UPI Payment Credentials Card */}
+          <div className="bg-gradient-to-br from-indigo-50/80 via-white to-slate-50 dark:from-indigo-950/30 dark:via-slate-900 dark:to-slate-800/60 p-5 rounded-2xl border border-indigo-100 dark:border-indigo-900/40 space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                <span>UPI Payment Details</span>
+              </span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-semibold">
+                Instant Transfer
+              </span>
             </div>
 
-            <p className="text-xs text-slate-600 dark:text-slate-300 mt-3 font-medium">
-              Scan with Google Pay, PhonePe, Paytm, or BHIM
-            </p>
-
             {/* UPI ID Display & Copy */}
-            {upiId && (
-              <div className="mt-3.5 w-full flex items-center justify-between gap-2 p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl">
-                <div className="min-w-0 text-left">
-                  <span className="text-[10px] text-slate-400 block">UPI ID / VPA</span>
-                  <span className="text-xs font-mono font-bold text-slate-800 dark:text-slate-200 truncate block">
-                    {upiId}
-                  </span>
-                </div>
+            <div className="p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-3 shadow-xs">
+              <div className="min-w-0 flex-1">
+                <span className="text-[10px] text-slate-400 block font-medium">UPI ID / VPA</span>
+                <span className="text-sm font-mono font-bold text-slate-900 dark:text-white truncate block">
+                  {upiId || member.email}
+                </span>
+              </div>
+              {upiId && (
                 <button
+                  type="button"
                   onClick={handleCopyUpi}
-                  className="px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950 dark:hover:bg-indigo-900 text-indigo-600 dark:text-indigo-400 text-xs font-bold flex items-center gap-1 transition cursor-pointer flex-shrink-0"
+                  className="px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950 dark:hover:bg-indigo-900 text-indigo-600 dark:text-indigo-400 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer flex-shrink-0"
                 >
                   {copiedUpi ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
                   <span>{copiedUpi ? 'Copied' : 'Copy'}</span>
                 </button>
-              </div>
-            )}
-
-            {/* Actions: Download QR & Pay Intent */}
-            <div className="grid grid-cols-2 gap-2 w-full mt-3">
-              <button
-                type="button"
-                onClick={handleDownloadQr}
-                className="py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-700 transition flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>Save QR</span>
-              </button>
-
-              <a
-                href={`upi://pay?pa=${encodeURIComponent(upiId || member.email)}&pn=${encodeURIComponent(member.name)}&cu=INR`}
-                className="py-2 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 text-center shadow-xs"
-              >
-                <CreditCard className="w-3.5 h-3.5" />
-                <span>Open UPI App</span>
-              </a>
+              )}
             </div>
+
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              Tap <strong>Launch UPI App</strong> below to open Google Pay, PhonePe, Paytm, or BHIM directly.
+            </p>
+
+            {/* Launch UPI CTA */}
+            <a
+              href={upiIntentUrl}
+              className="w-full py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold text-xs sm:text-sm shadow-md shadow-indigo-600/30 flex items-center justify-center gap-2 transition text-center"
+            >
+              <CreditCard className="w-4 h-4" />
+              <span>Launch UPI App & Pay</span>
+              <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+            </a>
           </div>
         </div>
 
@@ -221,7 +185,7 @@ export const MemberProfileModal: React.FC<MemberProfileModalProps> = ({
           <span className="text-[11px] text-slate-400">Hisaabdo Verified Payment Profile</span>
           <button
             onClick={onClose}
-            className="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 cursor-pointer"
+            className="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 cursor-pointer hover:bg-slate-300 dark:hover:bg-slate-600 transition"
           >
             Close
           </button>

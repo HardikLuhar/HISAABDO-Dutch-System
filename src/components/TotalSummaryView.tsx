@@ -116,6 +116,23 @@ export const TotalSummaryView: React.FC<TotalSummaryViewProps> = ({
     loadPendingSentClaims();
   }, [user?.id]);
 
+  // When selectedContact is opened, fetch latest profile from DB to show UPI ID instantly
+  useEffect(() => {
+    if (!selectedContact?.userId) return;
+    api.getUser(selectedContact.userId).then(freshUser => {
+      if (freshUser && (freshUser.upiId !== selectedContact.upiId || freshUser.phone !== selectedContact.phone)) {
+        setSelectedContact(prev => {
+          if (!prev || prev.userId !== freshUser.id) return prev;
+          return {
+            ...prev,
+            upiId: freshUser.upiId || prev.upiId,
+            phone: freshUser.phone || prev.phone
+          };
+        });
+      }
+    }).catch(() => {});
+  }, [selectedContact?.userId]);
+
   // Fetch all group calculations
   const loadAllGroupCalculations = async () => {
     if (!groups.length) return;

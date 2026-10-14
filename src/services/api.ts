@@ -98,6 +98,11 @@ export const api = {
     return request<{ users: User[] }>('/api/auth/users');
   },
 
+  async getUser(id: string): Promise<User> {
+    const res = await request<{ user: User }>(`/api/auth/users/${id}`);
+    return res.user;
+  },
+
   async searchUsers(query: string): Promise<{ users: User[] }> {
     return request<{ users: User[] }>(`/api/auth/users/search?q=${encodeURIComponent(query)}`);
   },

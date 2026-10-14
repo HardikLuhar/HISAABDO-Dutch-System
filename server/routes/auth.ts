@@ -465,3 +465,19 @@ authRouter.get('/users', async (req, res) => {
     return res.status(500).json({ error: err.message || 'Internal server error' });
   }
 });
+
+// Get single user by ID (fresh from DB)
+authRouter.get('/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await db.getUserById(id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    const { passwordHash: _, ...safeUser } = user;
+    return res.json({ user: safeUser });
+  } catch (err: any) {
+    console.error('get user error:', err);
+    return res.status(500).json({ error: err.message || 'Internal server error' });
+  }
+});

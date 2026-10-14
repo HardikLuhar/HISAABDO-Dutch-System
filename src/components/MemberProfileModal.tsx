@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, CurrencyCode } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
+import { api } from '../services/api';
 import { formatCurrency } from '../utils/formatters';
 import {
   X,
@@ -36,11 +37,23 @@ export const MemberProfileModal: React.FC<MemberProfileModalProps> = ({
   const { user } = useAuth();
   const { showToast } = useNotification();
   const [copiedUpi, setCopiedUpi] = useState(false);
+  const [liveUpiId, setLiveUpiId] = useState(member?.upiId || '');
+
+  useEffect(() => {
+    if (!isOpen || !member?.id) return;
+    setLiveUpiId(member.upiId || '');
+    // Fetch directly from DB so UPI is always up-to-date and shows instantly
+    api.getUser(member.id).then(fresh => {
+      if (fresh?.upiId) {
+        setLiveUpiId(fresh.upiId);
+      }
+    }).catch(() => {});
+  }, [isOpen, member?.id, member?.upiId]);
 
   if (!isOpen || !member) return null;
 
   const isSelf = user?.id === member.id;
-  const upiId = member.upiId || member.phone || '';
+  const upiId = liveUpiId || member.upiId || member.phone || '';
 
   const handleCopyUpi = () => {
     if (!upiId) return;

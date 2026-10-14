@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CurrencyCode } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import { useTheme } from '../context/ThemeContext';
+import { api } from '../services/api';
 import { X, User, Phone, Mail, DollarSign, Image, Moon, Sun, Check, Sparkles, RefreshCw, ChevronDown, ChevronUp, CreditCard } from 'lucide-react';
 
 interface UserProfileModalProps {
@@ -91,6 +92,23 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   const [avatarCategory, setAvatarCategory] = useState<'all' | 'people' | 'anime' | 'robots' | 'emoji'>('all');
   const [showCustomUrl, setShowCustomUrl] = useState(false);
   const [avatarList, setAvatarList] = useState<AvatarOption[]>(DEFAULT_AVATARS);
+
+  useEffect(() => {
+    if (isOpen && user?.id) {
+      setName(user.name || '');
+      setPhone(user.phone || '');
+      setAvatarUrl(user.avatarUrl || '');
+      setPreferredCurrency(user.preferredCurrency || 'INR');
+      setUpiId(user.upiId || '');
+
+      api.getUser(user.id).then(fresh => {
+        if (fresh) {
+          if (fresh.upiId !== undefined) setUpiId(fresh.upiId || '');
+          if (fresh.phone !== undefined) setPhone(fresh.phone || '');
+        }
+      }).catch(() => {});
+    }
+  }, [isOpen, user?.id]);
 
   if (!isOpen || !user) return null;
 

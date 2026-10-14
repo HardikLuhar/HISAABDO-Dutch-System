@@ -289,19 +289,28 @@ class Database {
 
   async createUser(user: User): Promise<User> {
     this.invalidateUsersCache();
-    const { error } = await supabase
+    const insertData: any = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      password_hash: user.passwordHash || '',
+      avatar_url: user.avatarUrl || '',
+      phone: user.phone || null,
+      preferred_currency: user.preferredCurrency || 'INR',
+      security_questions_set: user.securityQuestionsSet || false,
+      created_at: user.createdAt || new Date().toISOString(),
+    };
+    if (user.upiId) insertData.upi_id = user.upiId;
+
+    let { error } = await supabase
       .from('users')
-      .insert({
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        password_hash: user.passwordHash || '',
-        avatar_url: user.avatarUrl || '',
-        phone: user.phone || null,
-        preferred_currency: user.preferredCurrency || 'INR',
-        security_questions_set: user.securityQuestionsSet || false,
-        created_at: user.createdAt || new Date().toISOString(),
-      });
+      .insert(insertData);
+
+    if (error && insertData.upi_id) {
+      delete insertData.upi_id;
+      const retry = await supabase.from('users').insert(insertData);
+      error = retry.error;
+    }
     if (error) console.error('createUser error:', error);
     return user;
   }

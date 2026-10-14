@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db.js';
 import { requireAuth } from './auth.js';
-import { round2 } from '../engine.js';
+import { round2, calculatePairwiseDebts } from '../engine.js';
 import { Settlement } from '../types.js';
 import { sendPushToUser } from '../push.js';
 
@@ -184,6 +184,14 @@ settlementsRouter.post('/claims', requireAuth, async (req: any, res) => {
       return res.status(404).json({ error: 'Receiver user not found.' });
     }
 
+    // Check if there is already an active PENDING claim from this payer to this receiver
+    const existingPending = await db.getPendingClaimBetween(req.user.id, receiverId);
+    if (existingPending) {
+      return res.status(409).json({
+        error: `A payment verification request to ${receiver.name} is already pending. Please wait for them to confirm or decline before submitting again.`
+      });
+    }
+
     const claimId = `claim_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
     const newClaim = await db.createSettlementClaim({
       id: claimId,
@@ -240,6 +248,17 @@ settlementsRouter.get('/claims/pending', requireAuth, async (req: any, res) => {
   }
 });
 
+// Get pending settlement claims sent by current user (as payer)
+settlementsRouter.get('/claims/sent-pending', requireAuth, async (req: any, res) => {
+  try {
+    const claims = await db.getPendingClaimsForPayer(req.user.id);
+    return res.json({ claims });
+  } catch (err: any) {
+    console.error('get sent pending claims error:', err);
+    return res.status(500).json({ error: err.message || 'Internal server error' });
+  }
+});
+
 // 3. Receiver ACCEPTS payment claim -> automatically settles all groups in one go!
 settlementsRouter.post('/claims/:id/accept', requireAuth, async (req: any, res) => {
   try {
@@ -258,7 +277,13 @@ settlementsRouter.post('/claims/:id/accept', requireAuth, async (req: any, res) 
       return res.status(400).json({ error: `This claim has already been ${claim.status.toLowerCase()}.` });
     }
 
-    // Automatically settle each group in one atomic sweep
+    // Immediately mark claim accepted to prevent race conditions from concurrent clicks
+    await db.updateClaim(id, { status: 'ACCEPTED' });
+
+    // Cancel any other lingering pending claims between this payer and receiver
+    await db.cancelPendingClaimsBetween(claim.payerId, req.user.id, id);
+
+    // Automatically settle each group, verifying current debts to prevent overpayment
     let settledCount = 0;
     const errors: string[] = [];
 
@@ -267,13 +292,32 @@ settlementsRouter.post('/claims/:id/accept', requireAuth, async (req: any, res) 
         const group = await db.getGroupById(gd.groupId);
         if (!group) continue;
 
+        // Check how much the payer actually owes the receiver in this group right now
+        const expenses = await db.getExpensesByGroup(gd.groupId);
+        const settlements = await db.getSettlementsByGroup(gd.groupId);
+        const pairwiseDebts = calculatePairwiseDebts(group.members, expenses, settlements);
+        const actualDebt = pairwiseDebts.find(
+          d => d.fromUserId === claim.payerId && d.toUserId === req.user.id
+        );
+
+        const currentOwed = actualDebt ? round2(actualDebt.amount) : 0;
+        if (currentOwed <= 0.01) {
+          // Debt is already 0 (or was settled earlier). Skip to avoid overpayment!
+          console.log(`Skipping settlement for group ${group.name} - debt between ${claim.payerId} and ${req.user.id} is already 0`);
+          continue;
+        }
+
+        // Cap settlement amount so it never exceeds what is actually owed
+        const amountToSettle = round2(Math.min(Number(gd.amount), currentOwed));
+        if (amountToSettle <= 0) continue;
+
         const settlementId = `set_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
         await db.createSettlement({
           id: settlementId,
           groupId: gd.groupId,
           payerId: claim.payerId,
           receiverId: req.user.id,
-          amount: round2(Number(gd.amount)),
+          amount: amountToSettle,
           currency: gd.currency || group.defaultCurrency || 'INR',
           date: new Date().toISOString().split('T')[0],
           notes: `Verified settlement (${claim.paymentMethod === 'CASH' ? 'Cash' : 'UPI'}) across multi-group claim`,
@@ -288,8 +332,8 @@ settlementsRouter.post('/claims/:id/accept', requireAuth, async (req: any, res) 
           userName: req.user.name,
           userAvatar: req.user.avatarUrl,
           action: 'RECORDED_SETTLEMENT',
-          description: `${req.user.name} confirmed ₹${gd.amount} payment from ${claim.payerName} in group "${group.name}"`,
-          amount: gd.amount,
+          description: `${req.user.name} confirmed ₹${amountToSettle} payment from ${claim.payerName} in group "${group.name}"`,
+          amount: amountToSettle,
           currency: gd.currency || group.defaultCurrency,
           createdAt: new Date().toISOString()
         });
@@ -299,9 +343,6 @@ settlementsRouter.post('/claims/:id/accept', requireAuth, async (req: any, res) 
         errors.push(`${gd.groupName}: ${e.message}`);
       }
     }
-
-    // Mark claim accepted
-    await db.updateClaim(id, { status: 'ACCEPTED' });
 
     // Notify payer that receiver accepted!
     const groupList = claim.groupDebts.map(g => g.groupName).join(', ');

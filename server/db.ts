@@ -371,6 +371,29 @@ class Database {
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
+  async getPendingClaimsForPayer(payerId: string): Promise<SettlementClaim[]> {
+    return Array.from(settlementClaimsMap.values())
+      .filter(c => c.payerId === payerId && c.status === 'PENDING')
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async getPendingClaimBetween(payerId: string, receiverId: string): Promise<SettlementClaim | null> {
+    return Array.from(settlementClaimsMap.values())
+      .find(c => c.payerId === payerId && c.receiverId === receiverId && c.status === 'PENDING') || null;
+  }
+
+  async cancelPendingClaimsBetween(payerId: string, receiverId: string, exceptClaimId?: string): Promise<number> {
+    let cancelled = 0;
+    for (const [id, claim] of settlementClaimsMap.entries()) {
+      if (claim.payerId === payerId && claim.receiverId === receiverId && claim.status === 'PENDING' && id !== exceptClaimId) {
+        settlementClaimsMap.set(id, { ...claim, status: 'CANCELLED', updatedAt: new Date().toISOString() });
+        cancelled++;
+      }
+    }
+    if (cancelled > 0) saveClaims();
+    return cancelled;
+  }
+
   async getClaimById(id: string): Promise<SettlementClaim | null> {
     return settlementClaimsMap.get(id) || null;
   }

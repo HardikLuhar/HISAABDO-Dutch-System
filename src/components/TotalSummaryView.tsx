@@ -27,7 +27,8 @@ import {
   Check,
   Banknote,
   Copy,
-  Wallet
+  Wallet,
+  Clock
 } from 'lucide-react';
 import { MemberProfileModal } from './MemberProfileModal';
 
@@ -96,6 +97,24 @@ export const TotalSummaryView: React.FC<TotalSummaryViewProps> = ({
   const [copiedUpi, setCopiedUpi] = useState(false);
   const [isSettlingAll, setIsSettlingAll] = useState(false);
   const [isSendingNotice, setIsSendingNotice] = useState(false);
+  const [pendingSentReceiverIds, setPendingSentReceiverIds] = useState<Set<string>>(new Set());
+
+  // Fetch pending claims sent by current user
+  const loadPendingSentClaims = async () => {
+    if (!user) return;
+    try {
+      const claims = await api.getSentPendingSettlementClaims();
+      if (Array.isArray(claims)) {
+        setPendingSentReceiverIds(new Set(claims.map((c: any) => c.receiverId)));
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  useEffect(() => {
+    loadPendingSentClaims();
+  }, [user?.id]);
 
   // Fetch all group calculations
   const loadAllGroupCalculations = async () => {
@@ -373,7 +392,11 @@ export const TotalSummaryView: React.FC<TotalSummaryViewProps> = ({
 
   // Send combined payment claim (UPI or Cash) if focal user is the PAYER
   const handleSendPaymentClaim = async (contact: ContactSummary, method: 'UPI' | 'CASH') => {
-    if (!user) return;
+    if (!user || isSendingNotice) return;
+    if (pendingSentReceiverIds.has(contact.userId)) {
+      showToast(`A payment verification request to ${contact.name} is already pending. Please wait for them to confirm or decline.`, 'info');
+      return;
+    }
     setIsSendingNotice(true);
     try {
       const debtAmount = Math.abs(contact.netCombined);
@@ -398,12 +421,17 @@ export const TotalSummaryView: React.FC<TotalSummaryViewProps> = ({
         groupDebts: debtsToSettle
       });
 
+      setPendingSentReceiverIds(prev => new Set(prev).add(contact.userId));
+
       showToast(
         `Payment claim of ${formatCurrency(debtAmount, 'INR')} (${method === 'CASH' ? 'Cash' : 'UPI'}) sent to ${contact.name}! They will get an instant verification pop-up to settle all groups.`,
         'success'
       );
       setSelectedContact(null);
     } catch (err: any) {
+      if (err.message?.includes('already pending')) {
+        setPendingSentReceiverIds(prev => new Set(prev).add(contact.userId));
+      }
       showToast(err.message || 'Failed to submit payment claim', 'error');
     } finally {
       setIsSendingNotice(false);
@@ -1002,6 +1030,19 @@ export const TotalSummaryView: React.FC<TotalSummaryViewProps> = ({
                       </button>
                     </div>
 
+                    {/* Pending Verification Notice */}
+                    {pendingSentReceiverIds.has(selectedContact.userId) && (
+                      <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-200 text-xs flex items-center gap-2.5">
+                        <Clock className="w-5 h-5 text-amber-500 flex-shrink-0 animate-spin" />
+                        <div>
+                          <p className="font-bold">Verification Request Already Sent</p>
+                          <p className="text-[11px] text-amber-700/80 dark:text-amber-300/80 mt-0.5">
+                            You already sent a payment claim to <strong>{selectedContact.name}</strong>. They will receive a full-screen confirmation prompt when they open the app.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
                     {/* METHOD 1: UPI PAYMENT */}
                     {paymentMethod === 'UPI' && (
                       <div className="p-4 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 space-y-4">
@@ -1074,13 +1115,18 @@ export const TotalSummaryView: React.FC<TotalSummaryViewProps> = ({
                         <button
                           type="button"
                           onClick={() => handleSendPaymentClaim(selectedContact, 'UPI')}
-                          disabled={isSendingNotice}
+                          disabled={isSendingNotice || pendingSentReceiverIds.has(selectedContact.userId)}
                           className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-600/30 flex items-center justify-center gap-2 transition cursor-pointer disabled:opacity-50 mt-2"
                         >
                           {isSendingNotice ? (
                             <>
                               <Loader2 className="w-4 h-4 animate-spin" />
                               <span>Submitting verification claim...</span>
+                            </>
+                          ) : pendingSentReceiverIds.has(selectedContact.userId) ? (
+                            <>
+                              <Clock className="w-4 h-4 text-emerald-200 animate-spin" />
+                              <span>Verification Pending — Waiting for {selectedContact.name}</span>
                             </>
                           ) : (
                             <>
@@ -1117,13 +1163,18 @@ export const TotalSummaryView: React.FC<TotalSummaryViewProps> = ({
                         <button
                           type="button"
                           onClick={() => handleSendPaymentClaim(selectedContact, 'CASH')}
-                          disabled={isSendingNotice}
+                          disabled={isSendingNotice || pendingSentReceiverIds.has(selectedContact.userId)}
                           className="w-full py-3 px-4 rounded-xl bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white font-bold text-xs sm:text-sm shadow-md shadow-amber-600/30 flex items-center justify-center gap-2 transition cursor-pointer disabled:opacity-50"
                         >
                           {isSendingNotice ? (
                             <>
                               <Loader2 className="w-4 h-4 animate-spin" />
                               <span>Submitting cash claim...</span>
+                            </>
+                          ) : pendingSentReceiverIds.has(selectedContact.userId) ? (
+                            <>
+                              <Clock className="w-4 h-4 text-amber-200 animate-spin" />
+                              <span>Verification Pending — Waiting for {selectedContact.name}</span>
                             </>
                           ) : (
                             <>

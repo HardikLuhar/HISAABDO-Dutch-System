@@ -69,8 +69,9 @@ export const PaymentVerificationModal: React.FC<PaymentVerificationModalProps> =
 
   // 1. "De diye" -> Settles all amounts across every group automatically
   const handleAccept = async () => {
-    if (!activeClaim) return;
+    if (!activeClaim || isProcessing) return;
     setIsProcessing(true);
+    const currentPayerId = activeClaim.payerId;
     try {
       const res = await api.acceptSettlementClaim(activeClaim.id);
       try {
@@ -87,8 +88,8 @@ export const PaymentVerificationModal: React.FC<PaymentVerificationModalProps> =
         'success'
       );
 
-      // Remove from pending list & advance to next claim if any
-      const remaining = claims.filter(c => c.id !== activeClaim.id);
+      // Remove from pending list & also clear any duplicate claims from the same payer
+      const remaining = claims.filter(c => c.id !== activeClaim.id && c.payerId !== currentPayerId);
       setClaims(remaining);
       setActiveClaim(remaining[0] || null);
       onSettlementConfirmed();
@@ -101,8 +102,9 @@ export const PaymentVerificationModal: React.FC<PaymentVerificationModalProps> =
 
   // 2. "Nai diye" -> Declines payment; sender gets message that payment is declined
   const handleReject = async () => {
-    if (!activeClaim) return;
+    if (!activeClaim || isProcessing) return;
     setIsProcessing(true);
+    const currentPayerId = activeClaim.payerId;
     try {
       await api.rejectSettlementClaim(
         activeClaim.id,
@@ -113,8 +115,8 @@ export const PaymentVerificationModal: React.FC<PaymentVerificationModalProps> =
         'info'
       );
 
-      // Remove from pending list & advance to next claim if any
-      const remaining = claims.filter(c => c.id !== activeClaim.id);
+      // Remove from pending list & also clear any duplicate claims from the same payer
+      const remaining = claims.filter(c => c.id !== activeClaim.id && c.payerId !== currentPayerId);
       setClaims(remaining);
       setActiveClaim(remaining[0] || null);
     } catch (err: any) {

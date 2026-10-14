@@ -211,7 +211,7 @@ export interface SettlementClaim {
     amount: number;
     currency: CurrencyCode;
   }>;
-  status: 'PENDING' | 'ACCEPTED' | 'REJECTED';
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'CANCELLED';
   rejectionReason?: string;
   createdAt: string;
   updatedAt: string;

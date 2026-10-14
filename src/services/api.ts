@@ -320,6 +320,11 @@ export const api = {
     return res.claims;
   },
 
+  async getSentPendingSettlementClaims(): Promise<any[]> {
+    const res = await request<{ claims: any[] }>('/api/settlements/claims/sent-pending');
+    return res.claims;
+  },
+
   async acceptSettlementClaim(claimId: string): Promise<{ success: boolean; settledCount: number }> {
     return request<{ success: boolean; settledCount: number }>(`/api/settlements/claims/${claimId}/accept`, {
       method: 'POST'

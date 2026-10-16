@@ -297,13 +297,7 @@ export const DEFAULT_AVATARS: AvatarOption[] = [
   },
 
   // ================= PEOPLE & PERSONAS =================
-  {
-    id: 'p-alex',
-    name: 'Alex',
-    category: 'people',
-    url: 'https://api.dicebear.com/7.x/personas/svg?seed=Alex',
-    tags: ['person', 'modern', 'casual']
-  },
+
   {
     id: 'p-sam',
     name: 'Sam',

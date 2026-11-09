@@ -706,28 +706,28 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
       {/* TAB 2: BALANCES & DEBT SIMPLIFICATION */}
       {activeTab === 'balances' && (
         <div className="space-y-6">
-          {/* Smart Debt Simplification Banner (Section 9) */}
+          {/* Direct Debt Ledger Banner */}
           <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl p-4 sm:p-6 shadow-lg relative overflow-hidden">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
               <div>
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-semibold mb-2.5 border border-emerald-500/30">
                   <Sparkles className="w-3.5 h-3.5" />
-                  <span>Smart Debt Simplification Solver</span>
+                  <span>Direct Debt Ledger</span>
                 </div>
-                <h2 className="text-base sm:text-xl font-bold tracking-tight">Minimum Transaction Plan</h2>
+                <h2 className="text-base sm:text-xl font-bold tracking-tight">Direct Debts & Settle Up</h2>
                 <p className="text-[11px] sm:text-xs text-slate-300 mt-1 max-w-lg">
-                  Hisaabdo algorithm computes the global net cash flows to settle all balances in the fewest practical transfers.
+                  You only pay the people who actually paid on your behalf according to original expense records. No redirected debts to third parties.
                 </p>
               </div>
 
               {/* Optimization Pill */}
               <div className="bg-white/10 backdrop-blur rounded-xl p-3.5 border border-white/10 text-center sm:text-right">
-                <div className="text-xs text-slate-300 font-medium">Algorithm Result</div>
+                <div className="text-xs text-slate-300 font-medium">Original Creditor Ledger</div>
                 <div className="text-lg font-extrabold text-emerald-400">
-                  {groupData.debtSimplification.simplifiedCount} Payments Needed
+                  {groupData.directDebts ? groupData.directDebts.length : groupData.debtSimplification.simplifiedCount} Outstanding
                 </div>
                 <div className="text-[11px] text-slate-400">
-                  Reduced from {groupData.debtSimplification.unsimplifiedCount} pairwise transfers ({groupData.debtSimplification.transactionsSaved} saved)
+                  Direct Person-to-Person Relationships
                 </div>
               </div>
             </div>
@@ -738,11 +738,11 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
                 onClick={() => setShowUnsimplified(!showUnsimplified)}
                 className="text-xs text-emerald-300 hover:text-emerald-200 font-semibold underline underline-offset-4 cursor-pointer"
               >
-                {showUnsimplified ? 'Hide Raw Pairwise Debts' : 'View Raw Unsimplified Debts (Before Simplification)'}
+                {showUnsimplified ? 'Hide Raw Audit Breakdown' : 'View Raw Pairwise Audit Debts'}
               </button>
 
               <span className="text-[11px] text-slate-400 hidden sm:inline">
-                Saves time and eliminates circular transactions
+                Direct creditor relationships strictly preserved
               </span>
             </div>
           </div>
@@ -776,7 +776,7 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
           <div className="space-y-3">
             <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              <span>Suggested Optimal Payments ({groupData.debtSimplification.simplifiedCount})</span>
+              <span>Direct Person-to-Person Payments ({groupData.directDebts ? groupData.directDebts.length : groupData.debtSimplification.simplifiedCount})</span>
             </h3>
 
             {groupData.debtSimplification.simplified.length === 0 ? (

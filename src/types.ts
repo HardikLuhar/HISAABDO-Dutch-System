@@ -139,6 +139,7 @@ export interface GroupCalculationData {
   myNet: number;
   myDebtsOwed: DebtTransaction[];
   myDebtsDueToMe: DebtTransaction[];
+  directDebts: DebtTransaction[];
   debtSimplification: {
     unsimplified: DebtTransaction[];
     simplified: DebtTransaction[];

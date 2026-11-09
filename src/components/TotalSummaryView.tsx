@@ -226,8 +226,8 @@ export const TotalSummaryView: React.FC<TotalSummaryViewProps> = ({
       const calc = groupCalculations.get(g.id);
       if (!calc) continue;
 
-      // Extract simplified debts for this group
-      const transactions: DebtTransaction[] = calc.debtSimplification?.simplified || [];
+      // Extract direct debts for this group (preserving original debtor-creditor relationships)
+      const transactions: DebtTransaction[] = calc.directDebts || calc.debtSimplification?.simplified || [];
 
       for (const tx of transactions) {
         // Case 1: Focal user owes someone else

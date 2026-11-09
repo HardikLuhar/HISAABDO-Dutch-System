@@ -369,16 +369,28 @@ groupsRouter.get('/:id', requireAuth, async (req: any, res) => {
     // Calculate Net Balances
     const { balances, netMap } = calculateGroupBalances(group.members, usersMap, expenses, settlements);
 
-    // Calculate Raw Pairwise Debts (Before Simplification)
+    // Fetch Direct Debts from the Direct Debt Ledger (original debtor-creditor relationships)
+    const directDebts = await db.getDirectDebtsByGroup(groupId);
+
+    // Keep raw pairwise debts for reconciliation/audit
     const pairwiseDebts = calculatePairwiseDebts(group.members, expenses, settlements);
 
-    // Calculate Smart Simplified Debts (After Simplification)
-    const simplifiedResult = simplifyDebts(netMap);
-    simplifiedResult.unsimplifiedCount = pairwiseDebts.length;
-    simplifiedResult.transactionsSaved = Math.max(0, pairwiseDebts.length - simplifiedResult.transactions.length);
+    // Format debts with user names and avatars
+    const detailedDirectDebts = directDebts.map(d => {
+      const fromUser = usersMap.get(d.debtorId);
+      const toUser = usersMap.get(d.creditorId);
+      return {
+        fromUserId: d.debtorId,
+        fromName: fromUser ? fromUser.name : 'Unknown',
+        fromAvatar: fromUser ? fromUser.avatarUrl : '',
+        toUserId: d.creditorId,
+        toName: toUser ? toUser.name : 'Unknown',
+        toAvatar: toUser ? toUser.avatarUrl : '',
+        amount: d.amount
+      };
+    });
 
-    // Map user details to debts
-    const formatDebt = (debt: { fromUserId: string; toUserId: string; amount: number }) => {
+    const detailedPairwise = pairwiseDebts.map(debt => {
       const fromUser = usersMap.get(debt.fromUserId);
       const toUser = usersMap.get(debt.toUserId);
       return {
@@ -390,18 +402,15 @@ groupsRouter.get('/:id', requireAuth, async (req: any, res) => {
         toAvatar: toUser ? toUser.avatarUrl : '',
         amount: debt.amount
       };
-    };
-
-    const detailedPairwise = pairwiseDebts.map(formatDebt);
-    const detailedSimplified = simplifiedResult.transactions.map(formatDebt);
+    });
 
     // Total Group Spending
     const totalSpending = expenses.reduce((acc, e) => acc + e.amount, 0);
 
-    // Current user's specific status
+    // Current user's specific status from the direct debt ledger
     const myNet = netMap.get(req.user.id) || 0;
-    const myDebtsOwed = detailedSimplified.filter(d => d.fromUserId === req.user.id);
-    const myDebtsDueToMe = detailedSimplified.filter(d => d.toUserId === req.user.id);
+    const myDebtsOwed = detailedDirectDebts.filter(d => d.fromUserId === req.user.id);
+    const myDebtsDueToMe = detailedDirectDebts.filter(d => d.toUserId === req.user.id);
 
     return res.json({
       group,
@@ -410,12 +419,15 @@ groupsRouter.get('/:id', requireAuth, async (req: any, res) => {
       myNet,
       myDebtsOwed,
       myDebtsDueToMe,
+      directDebts: detailedDirectDebts,
+      // Backward-compatibility: 'simplified' now returns the Direct Debt Ledger
+      // (NEVER greedy min-cash-flow redirected payments!)
       debtSimplification: {
         unsimplified: detailedPairwise,
-        simplified: detailedSimplified,
-        unsimplifiedCount: pairwiseDebts.length,
-        simplifiedCount: detailedSimplified.length,
-        transactionsSaved: simplifiedResult.transactionsSaved
+        simplified: detailedDirectDebts,
+        unsimplifiedCount: detailedPairwise.length,
+        simplifiedCount: detailedDirectDebts.length,
+        transactionsSaved: Math.max(0, detailedPairwise.length - detailedDirectDebts.length)
       }
     });
   } catch (err: any) {

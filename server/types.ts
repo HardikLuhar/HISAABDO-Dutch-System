@@ -131,6 +131,38 @@ export interface SimplifiedDebt {
   amount: number;
 }
 
+export interface DirectDebt {
+  id: string;
+  groupId: string;
+  debtorId: string;
+  creditorId: string;
+  outstandingPaise: number;
+  amount: number; // in rupees (outstandingPaise / 100)
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ExpenseDebtAllocation {
+  id: string;
+  expenseId: string;
+  groupId: string;
+  debtorId: string;
+  creditorId: string;
+  amountPaise: number;
+  amount: number; // in rupees
+  createdAt: string;
+}
+
+export interface DebtTransaction {
+  fromUserId: string;
+  fromName: string;
+  fromAvatar: string;
+  toUserId: string;
+  toName: string;
+  toAvatar: string;
+  amount: number;
+}
+
 export interface MemberBalance {
   userId: string;
   name: string;

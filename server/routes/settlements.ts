@@ -75,6 +75,18 @@ settlementsRouter.post('/:groupId/settlements', requireAuth, async (req: any, re
       return res.status(400).json({ error: 'Both payer and receiver must be members of this group' });
     }
 
+    // Direct Debt verification: ensure debtor actually owes creditor in this group
+    const currentDebt = await db.getDirectDebtsBetween(groupId, payerId, receiverId);
+    const maxPayable = currentDebt ? round2(currentDebt.amount) : 0;
+    if (maxPayable <= 0.009) {
+      return res.status(400).json({ error: 'No outstanding debt exists from this member to you in this group' });
+    }
+    if (settleAmount > maxPayable + 0.05) {
+      return res.status(400).json({
+        error: `Settlement amount (${settleAmount}) exceeds current outstanding debt (${maxPayable})`
+      });
+    }
+
     const payer = await db.getUserById(payerId);
     const receiver = await db.getUserById(receiverId);
 
@@ -84,14 +96,14 @@ settlementsRouter.post('/:groupId/settlements', requireAuth, async (req: any, re
       groupId,
       payerId,
       receiverId,
-      amount: settleAmount,
+      amount: round2(Math.min(settleAmount, maxPayable)),
       currency: group.defaultCurrency,
       date,
       notes: notes ? notes.trim() : undefined,
       createdAt: new Date().toISOString()
     };
 
-    await db.createSettlement(settlement);
+    await db.recordSettlementWithLedger(settlement);
 
     // Notify the payer that the receiver has marked/confirmed the settlement
     if (groupMemberIds.has(payerId)) {
@@ -153,7 +165,7 @@ settlementsRouter.delete('/:groupId/settlements/:id', requireAuth, async (req: a
       return res.status(403).json({ error: 'Only the payment receiver can delete this settlement' });
     }
 
-    await db.deleteSettlement(id);
+    await db.deleteSettlementWithLedger(groupId, id);
     return res.json({ message: 'Settlement deleted successfully' });
   } catch (err: any) {
     console.error('delete settlement error:', err);
@@ -192,6 +204,30 @@ settlementsRouter.post('/claims', requireAuth, async (req: any, res) => {
       });
     }
 
+    // Direct Debt validation: verify debtor actually owes creditor in the specified groups
+    let verifiedTotal = 0;
+    const verifiedGroupDebts = [];
+    for (const gd of groupDebts) {
+      const dDebt = await db.getDirectDebtsBetween(gd.groupId, req.user.id, receiverId);
+      const owed = dDebt ? round2(dDebt.amount) : 0;
+      if (owed > 0.01) {
+        const claimAmountForGroup = round2(Math.min(Number(gd.amount), owed));
+        if (claimAmountForGroup > 0) {
+          verifiedGroupDebts.push({
+            ...gd,
+            amount: claimAmountForGroup
+          });
+          verifiedTotal = round2(verifiedTotal + claimAmountForGroup);
+        }
+      }
+    }
+
+    if (verifiedGroupDebts.length === 0 || verifiedTotal <= 0.01) {
+      return res.status(400).json({
+        error: `You do not have any outstanding debts owed to ${receiver.name} in the selected group(s).`
+      });
+    }
+
     const claimId = `claim_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
     const newClaim = await db.createSettlementClaim({
       id: claimId,
@@ -200,9 +236,9 @@ settlementsRouter.post('/claims', requireAuth, async (req: any, res) => {
       payerAvatar: req.user.avatarUrl || '',
       receiverId,
       receiverName: receiver.name,
-      totalAmount: round2(Number(totalAmount)),
+      totalAmount: verifiedTotal,
       paymentMethod: paymentMethod === 'CASH' ? 'CASH' : 'UPI',
-      groupDebts,
+      groupDebts: verifiedGroupDebts,
       status: 'PENDING',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
@@ -292,15 +328,9 @@ settlementsRouter.post('/claims/:id/accept', requireAuth, async (req: any, res) 
         const group = await db.getGroupById(gd.groupId);
         if (!group) continue;
 
-        // Check how much the payer actually owes the receiver in this group right now
-        const expenses = await db.getExpensesByGroup(gd.groupId);
-        const settlements = await db.getSettlementsByGroup(gd.groupId);
-        const pairwiseDebts = calculatePairwiseDebts(group.members, expenses, settlements);
-        const actualDebt = pairwiseDebts.find(
-          d => d.fromUserId === claim.payerId && d.toUserId === req.user.id
-        );
-
-        const currentOwed = actualDebt ? round2(actualDebt.amount) : 0;
+        // Check how much the payer actually owes the receiver in this group from the direct debt ledger
+        const directDebt = await db.getDirectDebtsBetween(gd.groupId, claim.payerId, req.user.id);
+        const currentOwed = directDebt ? round2(directDebt.amount) : 0;
         if (currentOwed <= 0.01) {
           // Debt is already 0 (or was settled earlier). Skip to avoid overpayment!
           console.log(`Skipping settlement for group ${group.name} - debt between ${claim.payerId} and ${req.user.id} is already 0`);
@@ -312,7 +342,7 @@ settlementsRouter.post('/claims/:id/accept', requireAuth, async (req: any, res) 
         if (amountToSettle <= 0) continue;
 
         const settlementId = `set_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
-        await db.createSettlement({
+        await db.recordSettlementWithLedger({
           id: settlementId,
           groupId: gd.groupId,
           payerId: claim.payerId,

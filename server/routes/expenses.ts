@@ -193,7 +193,7 @@ expensesRouter.post('/:groupId/expenses', requireAuth, async (req: any, res) => 
       updatedAt: new Date().toISOString()
     };
 
-    await db.createExpense(newExpense);
+    await db.recordExpenseWithLedger(newExpense);
 
     // 3. Log Activity
     const payerNames = [];
@@ -311,7 +311,7 @@ expensesRouter.put('/:groupId/expenses/:id', requireAuth, async (req: any, res) 
       newSplits = splitResult.splits;
     }
 
-    const updated = await db.updateExpense(id, {
+    const { expense: updated } = await db.updateExpenseWithLedger(id, {
       description: description ? description.trim() : existing.description,
       amount: totalAmount,
       date: date || existing.date,
@@ -392,7 +392,7 @@ expensesRouter.delete('/:groupId/expenses/:id', requireAuth, async (req: any, re
       return res.status(403).json({ error: 'Only the member who added this expense (or admin) can delete it' });
     }
 
-    const success = await db.deleteExpense(id);
+    const success = await db.deleteExpenseWithLedger(id);
     if (!success) {
       return res.status(500).json({ error: 'Failed to delete expense' });
     }

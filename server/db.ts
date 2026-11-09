@@ -2,13 +2,34 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { supabase } from './supabase.js';
-import { User, Group, GroupMember, Expense, Settlement, NotificationItem, ActivityItem, UserSecurityQuestion, ChatMessage, SettlementClaim } from './types.js';
+import { 
+  User, 
+  Group, 
+  GroupMember, 
+  Expense, 
+  Settlement, 
+  NotificationItem, 
+  ActivityItem, 
+  UserSecurityQuestion, 
+  ChatMessage, 
+  SettlementClaim,
+  DirectDebt,
+  ExpenseDebtAllocation 
+} from './types.js';
+import { 
+  computeExpenseAllocations, 
+  consolidateDirectDebts, 
+  paiseToRupees, 
+  rupeesToPaise 
+} from './engine.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DATA_DIR = path.resolve(__dirname, '../data');
 const USER_META_FILE = path.join(DATA_DIR, 'user_meta.json');
 const CLAIMS_FILE = path.join(DATA_DIR, 'settlement_claims.json');
+const DIRECT_DEBTS_FILE = path.join(DATA_DIR, 'direct_debts.json');
+const EXPENSE_ALLOCATIONS_FILE = path.join(DATA_DIR, 'expense_debt_allocations.json');
 
 // In-memory + persisted storage for extra user profile fields (UPI ID)
 const userExtraMeta = new Map<string, { upiId?: string }>();
@@ -61,7 +82,94 @@ function saveClaims() {
 }
 loadClaims();
 
+// In-memory + persisted storage for Direct Debts
+const directDebtsMap = new Map<string, DirectDebt>();
+function loadDirectDebts() {
+  try {
+    if (fs.existsSync(DIRECT_DEBTS_FILE)) {
+      const data = JSON.parse(fs.readFileSync(DIRECT_DEBTS_FILE, 'utf-8'));
+      for (const d of data) {
+        directDebtsMap.set(d.id, d);
+      }
+    }
+  } catch (e) {
+    // ignore
+  }
+}
+function saveDirectDebts() {
+  try {
+    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+    const list = Array.from(directDebtsMap.values());
+    fs.writeFileSync(DIRECT_DEBTS_FILE, JSON.stringify(list, null, 2), 'utf-8');
+  } catch (e) {
+    // ignore
+  }
+}
+loadDirectDebts();
+
+// In-memory + persisted storage for Expense Debt Allocations
+const expenseAllocationsMap = new Map<string, ExpenseDebtAllocation>();
+function loadExpenseAllocations() {
+  try {
+    if (fs.existsSync(EXPENSE_ALLOCATIONS_FILE)) {
+      const data = JSON.parse(fs.readFileSync(EXPENSE_ALLOCATIONS_FILE, 'utf-8'));
+      for (const a of data) {
+        expenseAllocationsMap.set(a.id, a);
+      }
+    }
+  } catch (e) {
+    // ignore
+  }
+}
+function saveExpenseAllocations() {
+  try {
+    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+    const list = Array.from(expenseAllocationsMap.values());
+    fs.writeFileSync(EXPENSE_ALLOCATIONS_FILE, JSON.stringify(list, null, 2), 'utf-8');
+  } catch (e) {
+    // ignore
+  }
+}
+loadExpenseAllocations();
+
 // ─── Helpers ────────────────────────────────────────────────────────────────
+
+async function withTimeout<T>(promise: PromiseLike<T>, ms = 2000): Promise<T> {
+  return Promise.race([
+    Promise.resolve(promise),
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))
+  ]);
+}
+
+/** Convert snake_case DB row to camelCase DirectDebt */
+function rowToDirectDebt(row: any): DirectDebt {
+  const paise = Number(row.outstanding_paise ?? 0);
+  return {
+    id: row.id,
+    groupId: row.group_id,
+    debtorId: row.debtor_id,
+    creditorId: row.creditor_id,
+    outstandingPaise: paise,
+    amount: paiseToRupees(paise),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+/** Convert snake_case DB row to camelCase ExpenseDebtAllocation */
+function rowToExpenseDebtAllocation(row: any): ExpenseDebtAllocation {
+  const paise = Number(row.amount_paise ?? 0);
+  return {
+    id: row.id,
+    expenseId: row.expense_id,
+    groupId: row.group_id,
+    debtorId: row.debtor_id,
+    creditorId: row.creditor_id,
+    amountPaise: paise,
+    amount: paiseToRupees(paise),
+    createdAt: row.created_at,
+  };
+}
 
 /** Convert snake_case DB row to camelCase User object */
 function rowToUser(row: any): User {
@@ -371,24 +479,108 @@ class Database {
   async createSettlementClaim(claim: SettlementClaim): Promise<SettlementClaim> {
     settlementClaimsMap.set(claim.id, claim);
     saveClaims();
+
+    // Persist to Supabase if table exists
+    if (supabase) {
+      try {
+        await supabase.from('settlement_claims').insert({
+          id: claim.id,
+          payer_id: claim.payerId,
+          payer_name: claim.payerName,
+          payer_avatar: claim.payerAvatar || '',
+          receiver_id: claim.receiverId,
+          receiver_name: claim.receiverName,
+          total_amount: claim.totalAmount,
+          payment_method: claim.paymentMethod,
+          group_debts: claim.groupDebts,
+          status: claim.status,
+          rejection_reason: claim.rejectionReason || null,
+          created_at: claim.createdAt,
+          updated_at: claim.updatedAt,
+        });
+      } catch (err) {
+        // Table may not exist yet in user's Supabase instance; local JSON guarantees persistence
+      }
+    }
+
     return claim;
   }
 
   async getPendingClaimsForReceiver(receiverId: string): Promise<SettlementClaim[]> {
+    if (supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('settlement_claims')
+          .select('*')
+          .eq('receiver_id', receiverId)
+          .eq('status', 'PENDING')
+          .order('created_at', { ascending: false });
+
+        if (!error && data !== null) {
+          const list: SettlementClaim[] = data.map(r => ({
+            id: r.id,
+            payerId: r.payer_id,
+            payerName: r.payer_name,
+            payerAvatar: r.payer_avatar || '',
+            receiverId: r.receiver_id,
+            receiverName: r.receiver_name,
+            totalAmount: Number(r.total_amount),
+            paymentMethod: r.payment_method,
+            groupDebts: r.group_debts || [],
+            status: r.status,
+            rejectionReason: r.rejection_reason || undefined,
+            createdAt: r.created_at,
+            updatedAt: r.updated_at,
+          }));
+          return list;
+        }
+      } catch {}
+    }
+
     return Array.from(settlementClaimsMap.values())
       .filter(c => c.receiverId === receiverId && c.status === 'PENDING')
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
   async getPendingClaimsForPayer(payerId: string): Promise<SettlementClaim[]> {
+    if (supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('settlement_claims')
+          .select('*')
+          .eq('payer_id', payerId)
+          .eq('status', 'PENDING')
+          .order('created_at', { ascending: false });
+
+        if (!error && data !== null) {
+          const list: SettlementClaim[] = data.map(r => ({
+            id: r.id,
+            payerId: r.payer_id,
+            payerName: r.payer_name,
+            payerAvatar: r.payer_avatar || '',
+            receiverId: r.receiver_id,
+            receiverName: r.receiver_name,
+            totalAmount: Number(r.total_amount),
+            paymentMethod: r.payment_method,
+            groupDebts: r.group_debts || [],
+            status: r.status,
+            rejectionReason: r.rejection_reason || undefined,
+            createdAt: r.created_at,
+            updatedAt: r.updated_at,
+          }));
+          return list;
+        }
+      } catch {}
+    }
+
     return Array.from(settlementClaimsMap.values())
       .filter(c => c.payerId === payerId && c.status === 'PENDING')
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
   async getPendingClaimBetween(payerId: string, receiverId: string): Promise<SettlementClaim | null> {
-    return Array.from(settlementClaimsMap.values())
-      .find(c => c.payerId === payerId && c.receiverId === receiverId && c.status === 'PENDING') || null;
+    const list = await this.getPendingClaimsForReceiver(receiverId);
+    return list.find(c => c.payerId === payerId && c.status === 'PENDING') || null;
   }
 
   async cancelPendingClaimsBetween(payerId: string, receiverId: string, exceptClaimId?: string): Promise<number> {
@@ -397,6 +589,15 @@ class Database {
       if (claim.payerId === payerId && claim.receiverId === receiverId && claim.status === 'PENDING' && id !== exceptClaimId) {
         settlementClaimsMap.set(id, { ...claim, status: 'CANCELLED', updatedAt: new Date().toISOString() });
         cancelled++;
+
+        if (supabase) {
+          try {
+            await supabase
+              .from('settlement_claims')
+              .update({ status: 'CANCELLED', updated_at: new Date().toISOString() })
+              .eq('id', id);
+          } catch {}
+        }
       }
     }
     if (cancelled > 0) saveClaims();
@@ -404,15 +605,58 @@ class Database {
   }
 
   async getClaimById(id: string): Promise<SettlementClaim | null> {
+    if (supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('settlement_claims')
+          .select('*')
+          .eq('id', id)
+          .maybeSingle();
+
+        if (!error && data) {
+          const c: SettlementClaim = {
+            id: data.id,
+            payerId: data.payer_id,
+            payerName: data.payer_name,
+            payerAvatar: data.payer_avatar || '',
+            receiverId: data.receiver_id,
+            receiverName: data.receiver_name,
+            totalAmount: Number(data.total_amount),
+            paymentMethod: data.payment_method,
+            groupDebts: data.group_debts || [],
+            status: data.status,
+            rejectionReason: data.rejection_reason || undefined,
+            createdAt: data.created_at,
+            updatedAt: data.updated_at,
+          };
+          settlementClaimsMap.set(c.id, c);
+          saveClaims();
+          return c;
+        }
+      } catch {}
+    }
     return settlementClaimsMap.get(id) || null;
   }
 
   async updateClaim(id: string, updates: Partial<SettlementClaim>): Promise<SettlementClaim | null> {
-    const claim = settlementClaimsMap.get(id);
+    const claim = await this.getClaimById(id);
     if (!claim) return null;
     const updated: SettlementClaim = { ...claim, ...updates, updatedAt: new Date().toISOString() };
     settlementClaimsMap.set(id, updated);
     saveClaims();
+
+    if (supabase) {
+      try {
+        const dbUpdates: any = { updated_at: updated.updatedAt };
+        if (updates.status !== undefined) dbUpdates.status = updates.status;
+        if (updates.rejectionReason !== undefined) dbUpdates.rejection_reason = updates.rejectionReason;
+        await supabase
+          .from('settlement_claims')
+          .update(dbUpdates)
+          .eq('id', id);
+      } catch {}
+    }
+
     return updated;
   }
 
@@ -720,7 +964,22 @@ class Database {
   }
 
   async deleteGroup(id: string): Promise<boolean> {
-    // Delete associated expenses and settlements first
+    // Delete associated expenses, allocations, direct_debts, and settlements first
+    if (supabase) {
+      try {
+        await supabase.from('direct_debts').delete().eq('group_id', id);
+        await supabase.from('expense_debt_allocations').delete().eq('group_id', id);
+      } catch (e) {}
+    }
+    for (const [key, d] of directDebtsMap.entries()) {
+      if (d.groupId === id) directDebtsMap.delete(key);
+    }
+    saveDirectDebts();
+    for (const [key, a] of expenseAllocationsMap.entries()) {
+      if (a.groupId === id) expenseAllocationsMap.delete(key);
+    }
+    saveExpenseAllocations();
+
     await supabase.from('expenses').delete().eq('group_id', id);
     await supabase.from('settlements').delete().eq('group_id', id);
     // group_members deleted via CASCADE
@@ -957,6 +1216,228 @@ class Database {
     return true;
   }
 
+  // ─── Direct Debt Ledger Operations ──────────────────────────────────────────
+
+  async getDirectDebtsByGroup(groupId: string): Promise<DirectDebt[]> {
+    if (supabase) {
+      try {
+        const { data, error } = await withTimeout(
+          supabase
+            .from('direct_debts')
+            .select('*')
+            .eq('group_id', groupId),
+          1500
+        );
+
+        if (!error && data !== null) {
+          // Clear any local cache for this group to avoid resurrection of deleted debts
+          for (const [id, d] of directDebtsMap.entries()) {
+            if (d.groupId === groupId) directDebtsMap.delete(id);
+          }
+          const list = data.map(rowToDirectDebt).filter(d => d.outstandingPaise > 0);
+          list.forEach(d => directDebtsMap.set(d.id, d));
+          saveDirectDebts();
+          return list.sort((a, b) => b.amount - a.amount);
+        }
+      } catch (e) {}
+    }
+
+    let list = Array.from(directDebtsMap.values())
+      .filter(d => d.groupId === groupId && d.outstandingPaise > 0);
+
+    // Self-healing: if empty but group has expenses, rebuild ledger automatically!
+    if (list.length === 0) {
+      const expenses = await this.getExpensesByGroup(groupId);
+      if (expenses.length > 0) {
+        list = await this.rebuildGroupLedger(groupId);
+      }
+    }
+
+    return list.sort((a, b) => b.amount - a.amount);
+  }
+
+  async getDirectDebtsBetween(groupId: string, debtorId: string, creditorId: string): Promise<DirectDebt | null> {
+    const debts = await this.getDirectDebtsByGroup(groupId);
+    return debts.find(d => d.debtorId === debtorId && d.creditorId === creditorId) || null;
+  }
+
+  async getDirectDebtAllocationsByGroup(groupId: string): Promise<ExpenseDebtAllocation[]> {
+    if (supabase) {
+      try {
+        const { data, error } = await withTimeout(
+          supabase
+            .from('expense_debt_allocations')
+            .select('*')
+            .eq('group_id', groupId),
+          1500
+        );
+
+        if (!error && data !== null) {
+          for (const [id, a] of expenseAllocationsMap.entries()) {
+            if (a.groupId === groupId) expenseAllocationsMap.delete(id);
+          }
+          const list = data.map(rowToExpenseDebtAllocation);
+          list.forEach(a => expenseAllocationsMap.set(a.id, a));
+          saveExpenseAllocations();
+          return list;
+        }
+      } catch (e) {}
+    }
+
+    return Array.from(expenseAllocationsMap.values())
+      .filter(a => a.groupId === groupId);
+  }
+
+  async saveExpenseAllocations(allocations: ExpenseDebtAllocation[]): Promise<void> {
+    if (!allocations.length) return;
+    for (const a of allocations) {
+      expenseAllocationsMap.set(a.id, a);
+    }
+    saveExpenseAllocations();
+
+    if (supabase) {
+      try {
+        const rows = allocations.map(a => ({
+          id: a.id,
+          expense_id: a.expenseId,
+          group_id: a.groupId,
+          debtor_id: a.debtorId,
+          creditor_id: a.creditorId,
+          amount_paise: a.amountPaise,
+          created_at: a.createdAt,
+        }));
+        await withTimeout(
+          supabase.from('expense_debt_allocations').upsert(rows, { onConflict: 'id' }),
+          1500
+        );
+      } catch (e) {}
+    }
+  }
+
+  async deleteExpenseAllocationsByExpense(expenseId: string): Promise<void> {
+    for (const [id, a] of expenseAllocationsMap.entries()) {
+      if (a.expenseId === expenseId) {
+        expenseAllocationsMap.delete(id);
+      }
+    }
+    saveExpenseAllocations();
+
+    if (supabase) {
+      try {
+        await withTimeout(
+          supabase.from('expense_debt_allocations').delete().eq('expense_id', expenseId),
+          1500
+        );
+      } catch (e) {}
+    }
+  }
+
+  async rebuildGroupLedger(groupId: string): Promise<DirectDebt[]> {
+    const expenses = await this.getExpensesByGroup(groupId);
+
+    const allAllocations: ExpenseDebtAllocation[] = [];
+    for (const exp of expenses) {
+      let allocs = Array.from(expenseAllocationsMap.values()).filter(a => a.expenseId === exp.id);
+      if (allocs.length === 0) {
+        allocs = computeExpenseAllocations(exp);
+        if (allocs.length > 0) {
+          await this.saveExpenseAllocations(allocs);
+        }
+      }
+      allAllocations.push(...allocs);
+    }
+
+    const settlements = await this.getSettlementsByGroup(groupId);
+    const consolidated = consolidateDirectDebts(groupId, allAllocations, settlements);
+
+    // Update local memory & file
+    for (const [id, d] of directDebtsMap.entries()) {
+      if (d.groupId === groupId) {
+        directDebtsMap.delete(id);
+      }
+    }
+    for (const d of consolidated) {
+      directDebtsMap.set(d.id, d);
+    }
+    saveDirectDebts();
+
+    // Sync with Supabase table if available
+    if (supabase) {
+      try {
+        await withTimeout(
+          supabase.from('direct_debts').delete().eq('group_id', groupId),
+          1500
+        );
+        if (consolidated.length > 0) {
+          const rows = consolidated.map(d => ({
+            id: d.id,
+            group_id: d.groupId,
+            debtor_id: d.debtorId,
+            creditor_id: d.creditorId,
+            outstanding_paise: d.outstandingPaise,
+            created_at: d.createdAt,
+            updated_at: d.updatedAt,
+          }));
+          await withTimeout(
+            supabase.from('direct_debts').insert(rows),
+            1500
+          );
+        }
+      } catch (e) {}
+    }
+
+    return consolidated.sort((a, b) => b.amount - a.amount);
+  }
+
+  async recordExpenseWithLedger(expense: Expense): Promise<{ expense: Expense; allocations: ExpenseDebtAllocation[] }> {
+    await this.createExpense(expense);
+    const allocations = computeExpenseAllocations(expense);
+    if (allocations.length > 0) {
+      await this.saveExpenseAllocations(allocations);
+    }
+    await this.rebuildGroupLedger(expense.groupId);
+    return { expense, allocations };
+  }
+
+  async updateExpenseWithLedger(expenseId: string, updates: Partial<Expense>): Promise<{ expense: Expense | null; allocations: ExpenseDebtAllocation[] }> {
+    const updated = await this.updateExpense(expenseId, updates);
+    if (!updated) return { expense: null, allocations: [] };
+
+    await this.deleteExpenseAllocationsByExpense(expenseId);
+    const allocations = computeExpenseAllocations(updated);
+    if (allocations.length > 0) {
+      await this.saveExpenseAllocations(allocations);
+    }
+    await this.rebuildGroupLedger(updated.groupId);
+    return { expense: updated, allocations };
+  }
+
+  async deleteExpenseWithLedger(expenseId: string): Promise<boolean> {
+    const existing = await this.getExpenseById(expenseId);
+    if (!existing) return false;
+
+    await this.deleteExpenseAllocationsByExpense(expenseId);
+    const ok = await this.deleteExpense(expenseId);
+    if (ok) {
+      await this.rebuildGroupLedger(existing.groupId);
+    }
+    return ok;
+  }
+
+  async recordSettlementWithLedger(settlement: Settlement): Promise<Settlement> {
+    const created = await this.createSettlement(settlement);
+    await this.rebuildGroupLedger(settlement.groupId);
+    return created;
+  }
+
+  async deleteSettlementWithLedger(groupId: string, settlementId: string): Promise<boolean> {
+    const ok = await this.deleteSettlement(settlementId);
+    if (ok) {
+      await this.rebuildGroupLedger(groupId);
+    }
+    return ok;
+  }
+
   // ─── Notifications Operations ──────────────────────────────────────────────
 
   async getNotificationsForUser(userId: string): Promise<NotificationItem[]> {
@@ -1125,6 +1606,20 @@ class Database {
   // ─── Utility ──────────────────────────────────────────────────────────────
 
   async clearAllData(): Promise<void> {
+    if (supabase) {
+      try {
+        await supabase.from('direct_debts').delete().neq('id', '');
+        await supabase.from('expense_debt_allocations').delete().neq('id', '');
+        await supabase.from('settlement_claims').delete().neq('id', '');
+      } catch (e) {}
+    }
+    directDebtsMap.clear();
+    saveDirectDebts();
+    expenseAllocationsMap.clear();
+    saveExpenseAllocations();
+    settlementClaimsMap.clear();
+    saveClaims();
+
     await supabase.from('chat_messages').delete().neq('id', '');
     await supabase.from('user_security_questions').delete().neq('id', '');
     await supabase.from('activities').delete().neq('id', '');

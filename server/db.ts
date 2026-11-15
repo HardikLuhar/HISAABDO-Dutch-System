@@ -840,6 +840,58 @@ class Database {
     return map;
   }
 
+  /**
+   * Batch-fetch all active direct debts across multiple groups in a single query.
+   * Used by the /summary/total endpoint to avoid N+1 queries.
+   * Returns a Map keyed by groupId → DirectDebt[].
+   */
+  async getDirectDebtsByGroupIds(groupIds: string[]): Promise<Map<string, DirectDebt[]>> {
+    const map = new Map<string, DirectDebt[]>();
+    groupIds.forEach(id => map.set(id, []));
+    if (groupIds.length === 0) return map;
+
+    try {
+      const { data, error } = await withTimeout(
+        supabase
+          .from('direct_debts')
+          .select('*')
+          .in('group_id', groupIds)
+          .gt('outstanding_paise', 0),
+        3000
+      );
+
+      if (error || !data) {
+        console.warn('getDirectDebtsByGroupIds: Supabase error or no data, falling back to local cache');
+        // Fallback: scan local directDebtsMap (keyed by debt id) for matching groups
+        for (const d of directDebtsMap.values()) {
+          if (groupIds.includes(d.groupId) && d.outstandingPaise > 0) {
+            const list = map.get(d.groupId);
+            if (list) list.push(d);
+          }
+        }
+        return map;
+      }
+
+      for (const row of data) {
+        const debt = rowToDirectDebt(row);
+        const list = map.get(debt.groupId);
+        if (list) list.push(debt);
+        else map.set(debt.groupId, [debt]);
+      }
+    } catch (err) {
+      console.warn('getDirectDebtsByGroupIds: timeout or error:', err);
+      // Fallback: scan local directDebtsMap (keyed by debt id) for matching groups
+      for (const d of directDebtsMap.values()) {
+        if (groupIds.includes(d.groupId) && d.outstandingPaise > 0) {
+          const list = map.get(d.groupId);
+          if (list) list.push(d);
+        }
+      }
+    }
+
+    return map;
+  }
+
   async getGroupById(id: string): Promise<Group | undefined> {
     const { data, error } = await supabase
       .from('groups')

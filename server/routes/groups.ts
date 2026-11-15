@@ -346,6 +346,63 @@ groupsRouter.post('/', requireAuth, async (req: any, res) => {
   }
 });
 
+// ─── Batch Total Summary (1 query for all groups' direct debts) ────────────
+groupsRouter.get('/summary/total', requireAuth, async (req: any, res) => {
+  try {
+    const userId = req.user.id;
+    const isSiteAdmin = checkIsSiteAdmin(req.user);
+
+    // 1. Fetch user's groups and users in parallel
+    const [groups, allUsers] = await Promise.all([
+      isSiteAdmin ? db.getGroups() : db.getGroupsForUser(userId),
+      db.getUsers()
+    ]);
+
+    if (!groups || groups.length === 0) {
+      return res.json({ debts: [], groups: [] });
+    }
+
+    const groupIds = groups.map(g => g.id);
+    const usersMap = new Map<string, User>(allUsers.map(u => [u.id, u]));
+
+    // 2. Single batch query for all active direct debts across all groups
+    const debtsByGroup = await db.getDirectDebtsByGroupIds(groupIds);
+
+    // 3. Build lightweight response: just the debt transactions with user info
+    const groupSummaries = groups.map(g => {
+      const debts = debtsByGroup.get(g.id) || [];
+
+      // Format debts with user names and avatars (matches DebtTransaction shape)
+      const formattedDebts = debts.map(d => {
+        const fromUser = usersMap.get(d.debtorId);
+        const toUser = usersMap.get(d.creditorId);
+        return {
+          fromUserId: d.debtorId,
+          fromName: fromUser ? fromUser.name : 'Unknown',
+          fromAvatar: fromUser ? fromUser.avatarUrl : '',
+          toUserId: d.creditorId,
+          toName: toUser ? toUser.name : 'Unknown',
+          toAvatar: toUser ? toUser.avatarUrl : '',
+          amount: d.amount
+        };
+      });
+
+      return {
+        groupId: g.id,
+        groupName: g.name,
+        category: g.category,
+        defaultCurrency: g.defaultCurrency,
+        directDebts: formattedDebts
+      };
+    });
+
+    return res.json({ groups: groupSummaries });
+  } catch (err: any) {
+    console.error('get total summary error:', err);
+    return res.status(500).json({ error: err.message || 'Internal server error' });
+  }
+});
+
 // Get single group details with complete calculations
 groupsRouter.get('/:id', requireAuth, async (req: any, res) => {
   try {

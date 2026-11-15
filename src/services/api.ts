@@ -161,6 +161,10 @@ export const api = {
     return request<GroupCalculationData>(`/api/groups/${id}`);
   },
 
+  async getTotalSummary(): Promise<{ groups: Array<{ groupId: string; groupName: string; category: string; defaultCurrency: string; directDebts: Array<{ fromUserId: string; fromName: string; fromAvatar: string; toUserId: string; toName: string; toAvatar: string; amount: number }> }> }> {
+    return request<{ groups: Array<{ groupId: string; groupName: string; category: string; defaultCurrency: string; directDebts: Array<{ fromUserId: string; fromName: string; fromAvatar: string; toUserId: string; toName: string; toAvatar: string; amount: number }> }> }>('/api/groups/summary/total');
+  },
+
   async createGroup(data: { name: string; description?: string; category?: GroupCategory; defaultCurrency?: CurrencyCode; memberEmails?: string[] }): Promise<{ group: GroupDetail }> {
     return request<{ group: GroupDetail }>('/api/groups', {
       method: 'POST',

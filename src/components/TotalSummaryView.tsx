@@ -133,23 +133,54 @@ export const TotalSummaryView: React.FC<TotalSummaryViewProps> = ({
     }).catch(() => {});
   }, [selectedContact?.userId]);
 
-  // Fetch all group calculations
+  // Fetch all group calculations via dedicated batch endpoint (single query)
   const loadAllGroupCalculations = async () => {
     if (!groups.length) return;
     setIsLoading(true);
     try {
-      const results = await Promise.allSettled(
-        groups.map(g => api.getGroupDetail(g.id))
-      );
+      const summary = await api.getTotalSummary();
       const map = new Map<string, GroupCalculationData>();
-      results.forEach((res, idx) => {
-        if (res.status === 'fulfilled' && res.value) {
-          map.set(groups[idx].id, res.value);
-        }
-      });
+
+      for (const gs of summary.groups) {
+        // Find the matching GroupItem for full group info
+        const groupItem = groups.find(g => g.id === gs.groupId);
+        if (!groupItem) continue;
+
+        // Map to GroupCalculationData shape that the rest of the component expects
+        map.set(gs.groupId, {
+          group: {
+            id: gs.groupId,
+            name: gs.groupName,
+            description: '',
+            category: gs.category as any,
+            defaultCurrency: gs.defaultCurrency as any,
+            createdBy: '',
+            createdAt: '',
+            inviteCode: '',
+            members: groupItem.members.map(m => ({
+              userId: m.userId,
+              role: m.role,
+              joinedAt: ''
+            }))
+          },
+          totalSpending: 0,
+          balances: [],
+          myNet: 0,
+          myDebtsOwed: [],
+          myDebtsDueToMe: [],
+          directDebts: gs.directDebts,
+          debtSimplification: {
+            unsimplified: [],
+            simplified: gs.directDebts,
+            unsimplifiedCount: 0,
+            simplifiedCount: gs.directDebts.length,
+            transactionsSaved: 0
+          }
+        });
+      }
       setGroupCalculations(map);
     } catch (err: any) {
-      console.error('Error loading group calculations:', err);
+      console.error('Error loading total summary:', err);
     } finally {
       setIsLoading(false);
     }

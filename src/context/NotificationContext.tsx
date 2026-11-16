@@ -46,7 +46,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [toasts, setToasts] = useState<Toast[]>([]);
-  
+
   // Push Notification state
   const isPushSupported = typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
   const [pushPermission, setPushPermission] = useState<NotificationPermission>(
@@ -87,7 +87,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       // Register Push Subscription with Service Worker
       const reg = await navigator.serviceWorker.ready;
       const vapidPublicKey = await api.getVapidPublicKey();
-      
+
       let subscription = await reg.pushManager.getSubscription();
       if (!subscription) {
         subscription = await reg.pushManager.subscribe({
@@ -121,7 +121,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         if (sub) {
           setIsPushSubscribed(true);
           // Sync with server in background
-          await api.subscribePush(sub.toJSON()).catch(() => {});
+          await api.subscribePush(sub.toJSON()).catch(() => { });
         } else if (Notification.permission === 'granted') {
           // Auto-subscribe if user already granted permission
           const vapidPublicKey = await api.getVapidPublicKey();
@@ -168,8 +168,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
             navigator.serviceWorker.ready.then((reg) => {
               reg.showNotification(notif.title || 'Hisaabdo', {
                 body: notif.message,
-                icon: '/icon-192.png',
-                badge: '/icon-192.png',
+                icon: '/logo.jpg',
+                badge: '/logo.jpg',
                 vibrate: [200, 100, 200],
                 data: { url: notif.groupId ? `/?group=${notif.groupId}` : '/' }
               } as any);
@@ -229,13 +229,12 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         {toasts.map(toast => (
           <div
             key={toast.id}
-            className={`pointer-events-auto flex items-center justify-between p-3.5 rounded-xl shadow-lg border text-sm font-medium transition-all transform translate-y-0 ${
-              toast.type === 'error'
+            className={`pointer-events-auto flex items-center justify-between p-3.5 rounded-xl shadow-lg border text-sm font-medium transition-all transform translate-y-0 ${toast.type === 'error'
                 ? 'bg-rose-50 border-rose-200 text-rose-800 dark:bg-rose-950 dark:border-rose-900 dark:text-rose-200'
                 : toast.type === 'info'
-                ? 'bg-sky-50 border-sky-200 text-sky-800 dark:bg-sky-950 dark:border-sky-900 dark:text-sky-200'
-                : 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950 dark:border-emerald-900 dark:text-emerald-200'
-            }`}
+                  ? 'bg-sky-50 border-sky-200 text-sky-800 dark:bg-sky-950 dark:border-sky-900 dark:text-sky-200'
+                  : 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950 dark:border-emerald-900 dark:text-emerald-200'
+              }`}
           >
             <span>{toast.message}</span>
             <button

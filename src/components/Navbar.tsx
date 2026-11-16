@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import { useTheme } from '../context/ThemeContext';
-import { Bell, Plus, Users, User as UserIcon, LogOut, ChevronDown, Check, ArrowRightLeft, Sparkles, Sun, Moon, Smartphone, Receipt, Clock } from 'lucide-react';
+import { Bell, Plus, Users, User as UserIcon, LogOut, ChevronDown, Check, Sparkles, Sun, Moon, Smartphone, Receipt, Clock } from 'lucide-react';
 import { CURRENCY_SYMBOLS } from '../utils/formatters';
 
 interface NavbarProps {
@@ -64,9 +64,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Left: Brand / Logo */}
         <div className="flex items-center gap-3 cursor-pointer" onClick={onNavigateHome} id="brand-logo-btn">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-sm shadow-emerald-500/20">
-            <ArrowRightLeft className="w-5 h-5" />
-          </div>
+          <img src="/logo.jpg" alt="Hisaabdo" className="w-10 h-10 rounded-xl shadow-sm shadow-emerald-500/20 object-cover" />
           <div>
             <div className="flex items-center gap-2">
               <span className="font-extrabold text-xl tracking-tight text-slate-900 dark:text-white">Hisaabdo</span>
@@ -198,9 +196,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                           <div
                             key={n.id}
                             onClick={() => !n.read && markAsRead(n.id)}
-                            className={`p-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800/70 transition cursor-pointer ${
-                              !n.read ? 'bg-emerald-50/40 dark:bg-emerald-950/30' : ''
-                            }`}
+                            className={`p-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800/70 transition cursor-pointer ${!n.read ? 'bg-emerald-50/40 dark:bg-emerald-950/30' : ''
+                              }`}
                           >
                             <div className="flex items-start justify-between gap-2">
                               <p className="text-xs font-semibold text-slate-900 dark:text-white">{n.title}</p>

@@ -5,7 +5,6 @@ import { useNotification } from '../context/NotificationContext';
 import { api } from '../services/api';
 import { SECURITY_QUESTIONS } from './SecurityQuestionsSetupModal';
 import {
-  ArrowRightLeft,
   User as UserIcon,
   Mail,
   Lock,
@@ -206,9 +205,7 @@ export const AuthView: React.FC = () => {
     <div className="min-h-[85vh] flex flex-col items-center justify-center py-8 px-4 sm:px-6">
       {/* Brand Header */}
       <div className="text-center max-w-lg mb-8">
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white shadow-lg shadow-emerald-500/25 mb-4">
-          <ArrowRightLeft className="w-7 h-7" />
-        </div>
+        <img src="/logo.jpg" alt="Hisaabdo" className="w-14 h-14 rounded-2xl shadow-lg shadow-emerald-500/25 mb-4 object-cover" />
         <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
           Hisaab<span className="text-emerald-600 dark:text-emerald-400">do</span>
         </h1>

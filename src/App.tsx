@@ -447,8 +447,8 @@ function HisaabdoMain() {
   if (authLoading && !user) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-4 transition-colors">
-        <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-lg shadow-emerald-600/30 animate-bounce mb-4">
-          <Loader2 className="w-6 h-6 animate-spin" />
+        <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-lg shadow-emerald-600/30 animate-bounce mb-4 ring-1 ring-emerald-500/20">
+          <img src="/logo.jpg" alt="Hisaabdo" className="w-full h-full object-cover" />
         </div>
         <h2 className="text-base font-bold text-slate-900 dark:text-white">Loading Hisaabdo...</h2>
       </div>
@@ -492,8 +492,8 @@ function HisaabdoMain() {
   if (isLoadingData && groups.length === 0 && !selectedGroupId) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-4 transition-colors">
-        <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-lg shadow-emerald-600/30 animate-bounce mb-4">
-          <Loader2 className="w-6 h-6 animate-spin" />
+        <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-lg shadow-emerald-600/30 animate-bounce mb-4 ring-1 ring-emerald-500/20">
+          <img src="/logo.jpg" alt="Hisaabdo" className="w-full h-full object-cover" />
         </div>
         <h2 className="text-base font-bold text-slate-900 dark:text-white">Loading your groups...</h2>
         <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Calculating balances and debt simplification plan</p>

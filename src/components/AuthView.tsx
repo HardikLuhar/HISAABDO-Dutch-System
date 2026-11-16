@@ -204,8 +204,10 @@ export const AuthView: React.FC = () => {
   return (
     <div className="min-h-[85vh] flex flex-col items-center justify-center py-8 px-4 sm:px-6">
       {/* Brand Header */}
-      <div className="text-center max-w-lg mb-8">
-        <img src="/logo.jpg" alt="Hisaabdo" className="w-14 h-14 rounded-2xl shadow-lg shadow-emerald-500/25 mb-4 object-cover" />
+      <div className="flex flex-col items-center text-center max-w-lg mb-8">
+        <div className="w-20 h-20 rounded-2xl overflow-hidden ring-2 ring-emerald-500/20 shadow-xl shadow-emerald-500/20 mb-5">
+          <img src="/logo.jpg" alt="Hisaabdo" className="w-full h-full object-cover" />
+        </div>
         <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
           Hisaab<span className="text-emerald-600 dark:text-emerald-400">do</span>
         </h1>

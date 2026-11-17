@@ -15,6 +15,7 @@ export interface User {
   qrCodeUrl?: string;
   upiId?: string;
   createdAt: string;
+  lastLoginAt?: string;
 }
 
 export interface GroupMemberInfo {
@@ -217,3 +218,76 @@ export interface SettlementClaim {
   createdAt: string;
   updatedAt: string;
 }
+
+// ─── Admin Panel Types ────────────────────────────────────────────────────────
+
+export interface UserLoginRecord {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  ipAddress?: string;
+  userAgent?: string;
+  createdAt: string;
+}
+
+export interface AdminNotice {
+  id: string;
+  title: string;
+  message: string;
+  priority: 'normal' | 'urgent' | 'info';
+  createdBy?: string;
+  createdByName?: string;
+  createdAt: string;
+  isActive: boolean;
+  acknowledgedCount?: number;
+  totalUsersCount?: number;
+}
+
+export interface AdminDashboardStats {
+  totalUsers: number;
+  newUsersToday: number;
+  newUsersThisWeek: number;
+  totalGroups: number;
+  totalExpenses: number;
+  totalSettlements: number;
+  activeNoticesCount: number;
+  performance: {
+    uptimeSeconds: number;
+    uptimeFormatted: string;
+    memoryUsageMb: number;
+    databaseLatencyMs: number;
+    status: 'healthy' | 'degraded';
+    nodeVersion: string;
+    platform: string;
+    timestamp: string;
+  };
+}
+
+export interface AdminUserListItem extends User {
+  groupCount: number;
+  expenseCount: number;
+  settlementCount: number;
+  totalLogins: number;
+  lastLoginAt?: string;
+}
+
+export interface AdminUserDetailResponse {
+  user: User;
+  stats: {
+    groupCount: number;
+    expenseCount: number;
+    settlementCount: number;
+    totalLogins: number;
+  };
+  groups: Array<{
+    id: string;
+    name: string;
+    category: GroupCategory;
+    role: 'admin' | 'member';
+    joinedAt: string;
+  }>;
+  recentLogins: UserLoginRecord[];
+  recentActivities: ActivityItem[];
+}
+

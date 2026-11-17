@@ -7,6 +7,7 @@ import { analyticsRouter } from './routes/analytics.js';
 import { notificationsRouter, activityRouter } from './routes/notifications.js';
 import { ocrRouter } from './routes/ocr.js';
 import { chatRouter } from './routes/chat.js';
+import { adminRouter, noticesRouter } from './routes/admin.js';
 
 const app = express();
 
@@ -38,6 +39,8 @@ app.use('/api/analytics', analyticsRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/activities', activityRouter);
 app.use('/api/receipt', ocrRouter);
+app.use('/api/admin', adminRouter);
+app.use('/api/notices', noticesRouter);
 
 // Global API error handler
 app.use('/api', (err: any, req: any, res: any, next: any) => {

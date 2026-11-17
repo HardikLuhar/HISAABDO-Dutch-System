@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import { useTheme } from '../context/ThemeContext';
-import { Bell, Plus, Users, User as UserIcon, LogOut, ChevronDown, Check, Sparkles, Sun, Moon, Smartphone, Receipt, Clock } from 'lucide-react';
+import { Bell, Plus, Users, User as UserIcon, LogOut, ChevronDown, Check, Sparkles, Sun, Moon, Smartphone, Receipt, Clock, Shield } from 'lucide-react';
 import { CURRENCY_SYMBOLS } from '../utils/formatters';
 
 interface NavbarProps {
@@ -13,6 +13,7 @@ interface NavbarProps {
   onNavigateHome: () => void;
   onOpenSummary?: () => void;
   onOpenActivity?: () => void;
+  onOpenAdmin?: () => void;
   isAdmin?: boolean;
 }
 
@@ -24,6 +25,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onNavigateHome,
   onOpenSummary,
   onOpenActivity,
+  onOpenAdmin,
   isAdmin = false
 }) => {
   const { user, logout } = useAuth();
@@ -92,6 +94,18 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
           </button>
 
+          {/* Admin Icon Quick Button for Mobile (Always visible for admin) */}
+          {user && isAdmin && onOpenAdmin && (
+            <button
+              onClick={onOpenAdmin}
+              className="p-2 rounded-xl text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 transition cursor-pointer flex items-center justify-center sm:hidden"
+              title="Admin Master Control Panel"
+              id="navbar-mobile-admin-btn"
+            >
+              <Shield className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            </button>
+          )}
+
           {user ? (
             <>
               {/* Total Summary Quick CTA */}
@@ -117,6 +131,19 @@ export const Navbar: React.FC<NavbarProps> = ({
                 >
                   <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
                   <span>Activity Feed</span>
+                </button>
+              )}
+
+              {/* Admin Master Panel Quick CTA (Admin Only) */}
+              {isAdmin && onOpenAdmin && (
+                <button
+                  onClick={onOpenAdmin}
+                  className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-300/80 dark:border-emerald-700/60 bg-emerald-50/80 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-emerald-900 dark:text-emerald-200 text-xs font-bold transition cursor-pointer"
+                  id="navbar-admin-btn"
+                  title="Admin Master Control Panel"
+                >
+                  <Shield className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>Admin Panel</span>
                 </button>
               )}
 
@@ -303,6 +330,25 @@ export const Navbar: React.FC<NavbarProps> = ({
                         >
                           <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                           <span>Admin Activity Feed</span>
+                        </button>
+                      )}
+
+                      {isAdmin && onOpenAdmin && (
+                        <button
+                          onClick={() => {
+                            setShowUserMenu(false);
+                            onOpenAdmin();
+                          }}
+                          className="w-full flex items-center justify-between px-3.5 py-2 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 cursor-pointer font-bold"
+                          id="menu-admin-panel-btn"
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <Shield className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                            <span>Admin Panel</span>
+                          </div>
+                          <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                            MASTER
+                          </span>
                         </button>
                       )}
 

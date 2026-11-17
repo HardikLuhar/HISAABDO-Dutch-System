@@ -11,7 +11,12 @@ import {
   ChatMessageItem,
   SplitType,
   GroupCategory,
-  CurrencyCode
+  CurrencyCode,
+  UserLoginRecord,
+  AdminNotice,
+  AdminDashboardStats,
+  AdminUserListItem,
+  AdminUserDetailResponse
 } from '../types';
 
 const TOKEN_KEY = 'splitwise_auth_token';
@@ -426,5 +431,79 @@ export const api = {
       body: JSON.stringify({ message })
     });
     return res.message;
+  },
+
+  // ─── Admin Panel & Notices ──────────────────────────────────────────────────
+
+  async getAdminStats(): Promise<AdminDashboardStats> {
+    return request<AdminDashboardStats>('/api/admin/stats');
+  },
+
+  async getAdminUsers(): Promise<{ users: AdminUserListItem[] }> {
+    return request<{ users: AdminUserListItem[] }>('/api/admin/users');
+  },
+
+  async getAdminUserDetail(id: string): Promise<AdminUserDetailResponse> {
+    return request<AdminUserDetailResponse>(`/api/admin/users/${id}`);
+  },
+
+  async updateAdminUser(id: string, updates: Partial<User>): Promise<{ success: boolean; user: User; message: string }> {
+    return request<{ success: boolean; user: User; message: string }>(`/api/admin/users/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates)
+    });
+  },
+
+  async resetAdminUserPassword(id: string, newPassword: string): Promise<{ success: boolean; message: string }> {
+    return request<{ success: boolean; message: string }>(`/api/admin/users/${id}/password`, {
+      method: 'PUT',
+      body: JSON.stringify({ newPassword })
+    });
+  },
+
+  async resetAdminUserAllDetails(id: string): Promise<{ success: boolean; user: User; message: string }> {
+    return request<{ success: boolean; user: User; message: string }>(`/api/admin/users/${id}/reset-all`, {
+      method: 'POST'
+    });
+  },
+
+  async deleteAdminUser(id: string): Promise<{ success: boolean; message: string }> {
+    return request<{ success: boolean; message: string }>(`/api/admin/users/${id}`, {
+      method: 'DELETE'
+    });
+  },
+
+  async getAdminLogins(userId?: string, limit: number = 100): Promise<{ logins: UserLoginRecord[] }> {
+    const query = new URLSearchParams();
+    if (userId) query.set('userId', userId);
+    query.set('limit', String(limit));
+    return request<{ logins: UserLoginRecord[] }>(`/api/admin/logins?${query.toString()}`);
+  },
+
+  async getAdminNotices(): Promise<{ notices: AdminNotice[] }> {
+    return request<{ notices: AdminNotice[] }>('/api/admin/notices');
+  },
+
+  async createAdminNotice(data: { title: string; message: string; priority?: 'normal' | 'urgent' | 'info' }): Promise<{ success: boolean; notice: AdminNotice; message: string }> {
+    return request<{ success: boolean; notice: AdminNotice; message: string }>('/api/admin/notices', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  async deleteAdminNotice(id: string): Promise<{ success: boolean; message: string }> {
+    return request<{ success: boolean; message: string }>(`/api/admin/notices/${id}`, {
+      method: 'DELETE'
+    });
+  },
+
+  async getPendingNotice(): Promise<{ notice: AdminNotice | null }> {
+    return request<{ notice: AdminNotice | null }>('/api/notices/pending');
+  },
+
+  async acknowledgeNotice(id: string): Promise<{ success: boolean; message: string }> {
+    return request<{ success: boolean; message: string }>(`/api/notices/${id}/acknowledge`, {
+      method: 'POST'
+    });
   }
 };

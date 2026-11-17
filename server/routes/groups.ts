@@ -11,9 +11,10 @@ export const groupsRouter = Router();
 // Helper to determine if a user has site administrator privileges (Hardik)
 export function checkIsSiteAdmin(user: any): boolean {
   if (!user) return false;
-  const nameMatch = user.name && user.name.trim().toLowerCase() === 'hardik';
+  const idMatch = user.id === 'usr_1790144443747_nlsoi';
+  const nameMatch = user.name && user.name.trim().toLowerCase().includes('hardik');
   const emailMatch = user.email && user.email.toLowerCase().includes('hardik');
-  return Boolean(nameMatch || emailMatch);
+  return Boolean(idMatch || nameMatch || emailMatch || user.role === 'admin' || user.isAdmin === true);
 }
 
 // Public Group Info for Shared Links (No auth required)
@@ -85,6 +86,11 @@ groupsRouter.post('/:id/member-login', async (req, res) => {
 
     const token = createSessionToken(user.id);
     const { passwordHash: _, ...safeUser } = user;
+
+    // Track user login activity
+    const forwarded = req.headers['x-forwarded-for'];
+    const ip = typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : (req.socket?.remoteAddress || 'Unknown');
+    db.recordUserLogin(user.id, user.name, user.email, ip, req.headers['user-agent'] as string).catch(() => {});
 
     return res.json({
       user: safeUser,

@@ -3,7 +3,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { NotificationProvider, useNotification } from './context/NotificationContext';
 import { api } from './services/api';
-import { GroupItem, GroupCalculationData, ExpenseItem, SettlementItem, ActivityItem, User } from './types';
+import { GroupItem, GroupCalculationData, ExpenseItem, SettlementItem, ActivityItem, User, AdminNotice } from './types';
 import { Navbar } from './components/Navbar';
 import { Dashboard } from './components/Dashboard';
 import { GroupDetailView } from './components/GroupDetail';
@@ -24,6 +24,8 @@ import { BalanceDetailModal, BalanceViewType } from './components/BalanceDetailM
 import { TotalSummaryView } from './components/TotalSummaryView';
 import { BottomNav } from './components/BottomNav';
 import { PaymentVerificationModal } from './components/PaymentVerificationModal';
+import { AdminPanelModal } from './components/AdminPanelModal';
+import { AdminNoticePopup } from './components/AdminNoticePopup';
 import { Loader2 } from 'lucide-react';
 
 // ─── URL Helpers ───────────────────────────────────────────────────────────────
@@ -52,8 +54,11 @@ function HisaabdoMain() {
   // Determine if current user is site admin (Hardik)
   const isHardik = Boolean(
     user && (
-      (user.name && user.name.trim().toLowerCase() === 'hardik') ||
-      (user.email && user.email.toLowerCase().includes('hardik'))
+      user.id === 'usr_1790144443747_nlsoi' ||
+      (user.name && user.name.trim().toLowerCase().includes('hardik')) ||
+      (user.email && user.email.toLowerCase().includes('hardik')) ||
+      (user as any).role === 'admin' ||
+      (user as any).isAdmin === true
     )
   );
 
@@ -161,6 +166,32 @@ function HisaabdoMain() {
   const [portalMemberId, setPortalMemberId] = useState<string | undefined>();
   const [portalPasscode, setPortalPasscode] = useState<string | undefined>();
   const [portalAutoExpense, setPortalAutoExpense] = useState(true);
+
+  // Admin Master Control Panel & Broadcast Notice states
+  const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
+  const [pendingNotice, setPendingNotice] = useState<AdminNotice | null>(null);
+
+  // Check for unacknowledged broadcast admin notices on login
+  useEffect(() => {
+    if (!user) return;
+    const checkNotice = async () => {
+      try {
+        const res = await api.getPendingNotice();
+        if (res?.notice) {
+          try {
+            const stored = JSON.parse(localStorage.getItem('hisaabdo_acknowledged_notices') || '[]');
+            if (stored.includes(res.notice.id)) {
+              return;
+            }
+          } catch (e) {}
+          setPendingNotice(res.notice);
+        }
+      } catch (e) {
+        // ignore
+      }
+    };
+    checkNotice();
+  }, [user?.id]);
 
   // Load all initial data (Stale-While-Revalidate)
   const loadDashboardData = useCallback(async () => {
@@ -538,6 +569,7 @@ function HisaabdoMain() {
           setMobileTab('activity');
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
+        onOpenAdmin={() => setIsAdminPanelOpen(true)}
         isAdmin={isHardik}
       />
 
@@ -594,6 +626,7 @@ function HisaabdoMain() {
               setBalanceViewType(viewType);
               setIsBalanceDetailOpen(true);
             }}
+            onOpenAdmin={() => setIsAdminPanelOpen(true)}
             isAdmin={isHardik}
           />
         )}
@@ -612,6 +645,7 @@ function HisaabdoMain() {
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
         onOpenAddExpense={() => handleOpenAddExpense()}
+        onOpenAdmin={() => setIsAdminPanelOpen(true)}
         isAdmin={isHardik}
       />
 
@@ -767,6 +801,21 @@ function HisaabdoMain() {
           loadDashboardData(true);
         }}
       />
+
+      {/* Admin Master Control Panel Modal */}
+      <AdminPanelModal
+        isOpen={isAdminPanelOpen}
+        onClose={() => setIsAdminPanelOpen(false)}
+        currentUser={user}
+      />
+
+      {/* Dramatic Full-Screen Broadcast Admin Notice Popup */}
+      {pendingNotice && (
+        <AdminNoticePopup
+          notice={pendingNotice}
+          onAcknowledge={() => setPendingNotice(null)}
+        />
+      )}
     </div>
   );
 }

@@ -1,10 +1,11 @@
 import React from 'react';
-import { Home, Users, Plus, Receipt, User, Clock } from 'lucide-react';
+import { Home, Users, Plus, Receipt, User, Clock, Shield } from 'lucide-react';
 
 interface BottomNavProps {
   currentTab: 'home' | 'groups' | 'summary' | 'activity' | 'profile';
   onSelectTab: (tab: 'home' | 'groups' | 'summary' | 'activity' | 'profile') => void;
   onOpenAddExpense: () => void;
+  onOpenAdmin?: () => void;
   isAdmin?: boolean;
 }
 
@@ -12,6 +13,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   currentTab,
   onSelectTab,
   onOpenAddExpense,
+  onOpenAdmin,
   isAdmin = false
 }) => {
   return (
@@ -86,7 +88,19 @@ export const BottomNav: React.FC<BottomNavProps> = ({
         </button>
       )}
 
-      {/* 6. Profile */}
+      {/* 6. Admin Master Panel (Admin Only) */}
+      {isAdmin && onOpenAdmin && (
+        <button
+          onClick={onOpenAdmin}
+          className="flex-1 flex flex-col items-center py-1 px-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 transition cursor-pointer"
+          id="bottom-nav-admin-btn"
+        >
+          <Shield className="w-5 h-5 mb-0.5 text-emerald-500" />
+          <span className="truncate">Admin</span>
+        </button>
+      )}
+
+      {/* 7. Profile */}
       <button
         onClick={() => onSelectTab('profile')}
         className={`flex-1 flex flex-col items-center py-1 px-1 text-[10px] font-medium transition cursor-pointer ${

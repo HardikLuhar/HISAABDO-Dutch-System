@@ -28,6 +28,14 @@ export async function requireAuth(req: any, res: any, next: any) {
   next();
 }
 
+function getClientIp(req: any): string {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (typeof forwarded === 'string') {
+    return forwarded.split(',')[0].trim();
+  }
+  return req.socket?.remoteAddress || 'Unknown';
+}
+
 // Quick Start / Create Account with verification
 authRouter.post('/quick-start', async (req, res) => {
   try {
@@ -121,6 +129,9 @@ authRouter.post('/quick-start', async (req, res) => {
     const token = createSessionToken(user.id);
     const { passwordHash: _, ...safeUser } = user;
 
+    // Track user login activity
+    db.recordUserLogin(user.id, user.name, user.email, getClientIp(req), req.headers['user-agent'] as string).catch(() => {});
+
     return res.json({ user: safeUser, token });
   } catch (err: any) {
     console.error('quick-start error:', err);
@@ -182,6 +193,9 @@ authRouter.post('/register', async (req, res) => {
     const token = createSessionToken(user.id);
     const { passwordHash: _, ...safeUser } = user;
 
+    // Track user login activity
+    db.recordUserLogin(user.id, user.name, user.email, getClientIp(req), req.headers['user-agent'] as string).catch(() => {});
+
     return res.status(201).json({ user: safeUser, token });
   } catch (err: any) {
     console.error('register error:', err);
@@ -238,6 +252,9 @@ authRouter.post('/login', async (req, res) => {
 
     const token = createSessionToken(user.id);
     const { passwordHash: _, ...safeUser } = user;
+
+    // Track user login activity
+    db.recordUserLogin(user.id, user.name, user.email, getClientIp(req), req.headers['user-agent'] as string).catch(() => {});
 
     return res.json({ user: safeUser, token });
   } catch (err: any) {

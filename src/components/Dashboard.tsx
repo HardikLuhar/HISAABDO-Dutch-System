@@ -18,7 +18,8 @@ import {
   Check,
   Receipt,
   Layers,
-  ArrowUpRight
+  ArrowUpRight,
+  Shield
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -32,6 +33,7 @@ interface DashboardProps {
   onOpenSettleUp: (groupId?: string) => void;
   onOpenJoinGroup: () => void;
   onOpenBalanceDetail?: (viewType: 'owed' | 'owe') => void;
+  onOpenAdmin?: () => void;
   isAdmin?: boolean;
 }
 
@@ -46,6 +48,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onOpenSettleUp,
   onOpenJoinGroup,
   onOpenBalanceDetail,
+  onOpenAdmin,
   isAdmin = false
 }) => {
   const { user } = useAuth();
@@ -498,8 +501,52 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <Users className="w-4 h-4" />
             <span className="hidden sm:inline">New Group</span>
           </button>
+
+          {isAdmin && onOpenAdmin && (
+            <button
+              onClick={onOpenAdmin}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-emerald-600 hover:from-amber-400 hover:to-emerald-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-emerald-500/30 border border-emerald-300/40 transition cursor-pointer"
+              id="dashboard-admin-panel-hero-btn"
+              title="Open Admin Master Control Panel"
+            >
+              <Shield className="w-4 h-4 text-white" />
+              <span>Admin Panel</span>
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Admin Quick Launch Banner (For Site Administrator) */}
+      {isAdmin && onOpenAdmin && (
+        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-indigo-500/10 border border-emerald-500/30 dark:border-emerald-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center shadow-md shadow-emerald-500/20 shrink-0">
+              <Shield className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white">
+                  Administrator Master Control
+                </span>
+                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                  MASTER
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                Manage all registered users, monitor live performance, reset passwords & broadcast notices.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onOpenAdmin}
+            className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition shadow-md shadow-emerald-600/20 cursor-pointer shrink-0"
+            id="dashboard-admin-launch-banner-btn"
+          >
+            <Shield className="w-4 h-4" />
+            <span>Launch Admin Panel</span>
+          </button>
+        </div>
+      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">

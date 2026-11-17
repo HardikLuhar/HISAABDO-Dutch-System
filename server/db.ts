@@ -14,7 +14,12 @@ import {
   ChatMessage, 
   SettlementClaim,
   DirectDebt,
-  ExpenseDebtAllocation 
+  ExpenseDebtAllocation,
+  UserLoginRecord,
+  AdminNotice,
+  AdminNoticeAck,
+  AdminDashboardStats,
+  AdminUserListItem
 } from './types.js';
 import { 
   computeExpenseAllocations, 
@@ -30,9 +35,12 @@ const USER_META_FILE = path.join(DATA_DIR, 'user_meta.json');
 const CLAIMS_FILE = path.join(DATA_DIR, 'settlement_claims.json');
 const DIRECT_DEBTS_FILE = path.join(DATA_DIR, 'direct_debts.json');
 const EXPENSE_ALLOCATIONS_FILE = path.join(DATA_DIR, 'expense_debt_allocations.json');
+const USER_LOGINS_FILE = path.join(DATA_DIR, 'user_logins.json');
+const ADMIN_NOTICES_FILE = path.join(DATA_DIR, 'admin_notices.json');
+const ADMIN_NOTICE_ACKS_FILE = path.join(DATA_DIR, 'admin_notice_acks.json');
 
-// In-memory + persisted storage for extra user profile fields (UPI ID)
-const userExtraMeta = new Map<string, { upiId?: string }>();
+// In-memory + persisted storage for extra user profile fields (UPI ID, lastLoginAt)
+const userExtraMeta = new Map<string, { upiId?: string; lastLoginAt?: string }>();
 function loadUserMeta() {
   try {
     if (fs.existsSync(USER_META_FILE)) {
@@ -56,6 +64,79 @@ function saveUserMeta() {
   }
 }
 loadUserMeta();
+
+// In-memory + persisted storage for User Logins
+const userLoginsMap = new Map<string, UserLoginRecord>();
+function loadUserLogins() {
+  try {
+    if (fs.existsSync(USER_LOGINS_FILE)) {
+      const data = JSON.parse(fs.readFileSync(USER_LOGINS_FILE, 'utf-8'));
+      for (const item of data) {
+        userLoginsMap.set(item.id, item);
+      }
+    }
+  } catch (e) {
+    // ignore
+  }
+}
+function saveUserLogins() {
+  try {
+    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+    const arr = Array.from(userLoginsMap.values()).slice(-500); // keep last 500
+    fs.writeFileSync(USER_LOGINS_FILE, JSON.stringify(arr, null, 2), 'utf-8');
+  } catch (e) {
+    // ignore
+  }
+}
+loadUserLogins();
+
+// In-memory + persisted storage for Admin Notices
+const adminNoticesMap = new Map<string, AdminNotice>();
+function loadAdminNotices() {
+  try {
+    if (fs.existsSync(ADMIN_NOTICES_FILE)) {
+      const data = JSON.parse(fs.readFileSync(ADMIN_NOTICES_FILE, 'utf-8'));
+      for (const item of data) {
+        adminNoticesMap.set(item.id, item);
+      }
+    }
+  } catch (e) {
+    // ignore
+  }
+}
+function saveAdminNotices() {
+  try {
+    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.writeFileSync(ADMIN_NOTICES_FILE, JSON.stringify(Array.from(adminNoticesMap.values()), null, 2), 'utf-8');
+  } catch (e) {
+    // ignore
+  }
+}
+loadAdminNotices();
+
+// In-memory + persisted storage for Admin Notice Acknowledgements
+const adminNoticeAcksMap = new Map<string, AdminNoticeAck>();
+function loadAdminNoticeAcks() {
+  try {
+    if (fs.existsSync(ADMIN_NOTICE_ACKS_FILE)) {
+      const data = JSON.parse(fs.readFileSync(ADMIN_NOTICE_ACKS_FILE, 'utf-8'));
+      for (const item of data) {
+        adminNoticeAcksMap.set(`${item.noticeId}_${item.userId}`, item);
+      }
+    }
+  } catch (e) {
+    // ignore
+  }
+}
+function saveAdminNoticeAcks() {
+  try {
+    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.writeFileSync(ADMIN_NOTICE_ACKS_FILE, JSON.stringify(Array.from(adminNoticeAcksMap.values()), null, 2), 'utf-8');
+  } catch (e) {
+    // ignore
+  }
+}
+loadAdminNoticeAcks();
 
 // In-memory + persisted storage for Settlement Claims
 const settlementClaimsMap = new Map<string, SettlementClaim>();
@@ -185,6 +266,7 @@ function rowToUser(row: any): User {
     securityQuestionsSet: row.security_questions_set ?? false,
     upiId: row.upi_id ?? extra.upiId ?? undefined,
     createdAt: row.created_at,
+    lastLoginAt: row.last_login_at ?? extra.lastLoginAt ?? undefined,
   };
 }
 
@@ -432,6 +514,12 @@ class Database {
       userExtraMeta.set(id, extra);
       saveUserMeta();
     }
+    if (updates.lastLoginAt !== undefined) {
+      const extra = userExtraMeta.get(id) || {};
+      extra.lastLoginAt = updates.lastLoginAt;
+      userExtraMeta.set(id, extra);
+      saveUserMeta();
+    }
 
     const dbUpdates: any = {};
     if (updates.name !== undefined) dbUpdates.name = updates.name;
@@ -442,6 +530,7 @@ class Database {
     if (updates.preferredCurrency !== undefined) dbUpdates.preferred_currency = updates.preferredCurrency;
     if (updates.securityQuestionsSet !== undefined) dbUpdates.security_questions_set = updates.securityQuestionsSet;
     if (updates.upiId !== undefined) dbUpdates.upi_id = updates.upiId;
+    if (updates.lastLoginAt !== undefined) dbUpdates.last_login_at = updates.lastLoginAt;
 
     let { data, error } = await supabase
       .from('users')
@@ -1653,6 +1742,411 @@ class Database {
       });
     if (error) console.error('createChatMessage error:', error);
     return msg;
+  }
+
+  // ─── Admin Panel Operations ──────────────────────────────────────────────
+
+  async recordUserLogin(userId: string, userName: string, userEmail: string, ipAddress?: string, userAgent?: string): Promise<UserLoginRecord> {
+    const record: UserLoginRecord = {
+      id: `login_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+      userId,
+      userName,
+      userEmail,
+      ipAddress: ipAddress || 'Unknown',
+      userAgent: userAgent || 'Unknown',
+      createdAt: new Date().toISOString(),
+    };
+    userLoginsMap.set(record.id, record);
+    saveUserLogins();
+
+    // Async update last_login_at in users table and memory
+    this.updateUser(userId, { lastLoginAt: record.createdAt }).catch(() => {});
+
+    try {
+      await supabase.from('user_logins').insert({
+        id: record.id,
+        user_id: record.userId,
+        user_name: record.userName,
+        user_email: record.userEmail,
+        ip_address: record.ipAddress,
+        user_agent: record.userAgent,
+        created_at: record.createdAt,
+      });
+    } catch (e) {
+      // ignore
+    }
+    return record;
+  }
+
+  async getUserLogins(userId?: string, limit = 100): Promise<UserLoginRecord[]> {
+    try {
+      let query = supabase.from('user_logins').select('*').order('created_at', { ascending: false }).limit(limit);
+      if (userId) {
+        query = query.eq('user_id', userId);
+      }
+      const { data, error } = await query;
+      if (!error && data && data.length > 0) {
+        return data.map((r: any): UserLoginRecord => ({
+          id: r.id,
+          userId: r.user_id,
+          userName: r.user_name || 'Unknown',
+          userEmail: r.user_email || '',
+          ipAddress: r.ip_address || 'Unknown',
+          userAgent: r.user_agent || 'Unknown',
+          createdAt: r.created_at,
+        }));
+      }
+    } catch (e) {}
+
+    // Fallback to in-memory map
+    let list = Array.from(userLoginsMap.values());
+    if (userId) {
+      list = list.filter(l => l.userId === userId);
+    }
+    list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return list.slice(0, limit);
+  }
+
+  async deleteUser(id: string): Promise<boolean> {
+    try {
+      // 1. Clean dependencies in Supabase
+      await supabase.from('group_members').delete().eq('user_id', id);
+      await supabase.from('notifications').delete().eq('user_id', id);
+      await supabase.from('push_subscriptions').delete().eq('user_id', id);
+      await supabase.from('user_security_questions').delete().eq('user_id', id);
+      await supabase.from('chat_messages').delete().eq('user_id', id);
+      await supabase.from('user_logins').delete().eq('user_id', id);
+      await supabase.from('admin_notice_acknowledgements').delete().eq('user_id', id);
+
+      // Clean debts & claims
+      await supabase.from('settlement_claims').delete().or(`payer_id.eq.${id},receiver_id.eq.${id}`);
+      await supabase.from('settlements').delete().or(`payer_id.eq.${id},receiver_id.eq.${id}`);
+      await supabase.from('direct_debts').delete().or(`debtor_id.eq.${id},creditor_id.eq.${id}`);
+      await supabase.from('expense_debt_allocations').delete().or(`debtor_id.eq.${id},creditor_id.eq.${id}`);
+
+      // Delete user row
+      const { error } = await supabase.from('users').delete().eq('id', id);
+      if (error) console.error('deleteUser supabase error:', error);
+    } catch (e) {
+      console.error('deleteUser error:', e);
+    }
+
+    // In-memory cleanup
+    this.invalidateUsersCache();
+    userExtraMeta.delete(id);
+    saveUserMeta();
+
+    for (const [k, l] of userLoginsMap.entries()) {
+      if (l.userId === id) userLoginsMap.delete(k);
+    }
+    saveUserLogins();
+
+    return true;
+  }
+
+  async resetUserAllDetails(id: string): Promise<User | null> {
+    const existing = await this.getUserById(id);
+    if (!existing) return null;
+
+    const defaultAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(existing.name)}`;
+    const updates: Partial<User> = {
+      passwordHash: '',
+      phone: undefined,
+      upiId: '',
+      avatarUrl: defaultAvatar,
+      preferredCurrency: 'INR',
+      securityQuestionsSet: false,
+    };
+
+    // Remove security questions
+    try {
+      await supabase.from('user_security_questions').delete().eq('user_id', id);
+    } catch (e) {}
+
+    // Update in DB
+    const updated = await this.updateUser(id, updates);
+    return updated;
+  }
+
+  async createAdminNotice(notice: { title: string; message: string; priority: 'normal' | 'urgent' | 'info'; createdBy?: string; createdByName?: string }): Promise<AdminNotice> {
+    const item: AdminNotice = {
+      id: `notice_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+      title: notice.title.trim(),
+      message: notice.message.trim(),
+      priority: notice.priority || 'normal',
+      createdBy: notice.createdBy,
+      createdByName: notice.createdByName,
+      createdAt: new Date().toISOString(),
+      isActive: true,
+      acknowledgedCount: 0,
+      totalUsersCount: (await this.getUsers()).length,
+    };
+
+    adminNoticesMap.set(item.id, item);
+    saveAdminNotices();
+
+    try {
+      await supabase.from('admin_notices').insert({
+        id: item.id,
+        title: item.title,
+        message: item.message,
+        priority: item.priority,
+        created_by: item.createdBy || null,
+        created_at: item.createdAt,
+        is_active: item.isActive,
+      });
+    } catch (e) {
+      // ignore
+    }
+
+    return item;
+  }
+
+  async getAdminNotices(): Promise<AdminNotice[]> {
+    const totalUsers = (await this.getUsers()).length;
+    let list: AdminNotice[] = [];
+    try {
+      const { data, error } = await supabase
+        .from('admin_notices')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (!error && data && data.length > 0) {
+        list = data.map((r: any): AdminNotice => ({
+          id: r.id,
+          title: r.title,
+          message: r.message,
+          priority: r.priority || 'normal',
+          createdBy: r.created_by,
+          createdAt: r.created_at,
+          isActive: r.is_active ?? true,
+        }));
+      }
+    } catch (e) {}
+
+    if (list.length === 0) {
+      list = Array.from(adminNoticesMap.values())
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+
+    // Calculate acknowledgement counts
+    let acks: AdminNoticeAck[] = [];
+    try {
+      const { data } = await supabase.from('admin_notice_acknowledgements').select('*');
+      if (data) {
+        acks = data.map((r: any) => ({ id: r.id, noticeId: r.notice_id, userId: r.user_id, acknowledgedAt: r.acknowledged_at }));
+      }
+    } catch (e) {}
+    if (acks.length === 0) {
+      acks = Array.from(adminNoticeAcksMap.values());
+    }
+
+    for (const notice of list) {
+      const count = acks.filter(a => a.noticeId === notice.id).length;
+      notice.acknowledgedCount = count;
+      notice.totalUsersCount = totalUsers;
+    }
+
+    return list;
+  }
+
+  async deleteAdminNotice(id: string): Promise<boolean> {
+    try {
+      await supabase.from('admin_notices').delete().eq('id', id);
+      await supabase.from('admin_notice_acknowledgements').delete().eq('notice_id', id);
+    } catch (e) {}
+    adminNoticesMap.delete(id);
+    saveAdminNotices();
+    for (const [k, v] of adminNoticeAcksMap.entries()) {
+      if (v.noticeId === id) adminNoticeAcksMap.delete(k);
+    }
+    saveAdminNoticeAcks();
+    return true;
+  }
+
+  async getPendingNoticeForUser(userId: string): Promise<AdminNotice | null> {
+    const notices = await this.getAdminNotices();
+    const activeNotices = notices.filter(n => n.isActive);
+    if (activeNotices.length === 0) return null;
+
+    // Check acknowledgements
+    const acks = new Set<string>();
+    try {
+      const { data } = await supabase
+        .from('admin_notice_acknowledgements')
+        .select('notice_id')
+        .eq('user_id', userId);
+      if (data) {
+        data.forEach(r => acks.add(r.notice_id));
+      }
+    } catch (e) {}
+
+    // Also check in-memory
+    for (const ack of adminNoticeAcksMap.values()) {
+      if (ack.userId === userId) acks.add(ack.noticeId);
+    }
+
+    for (const notice of activeNotices) {
+      if (!acks.has(notice.id)) {
+        return notice;
+      }
+    }
+    return null;
+  }
+
+  async acknowledgeNotice(noticeId: string, userId: string): Promise<boolean> {
+    const ack: AdminNoticeAck = {
+      id: `ack_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+      noticeId,
+      userId,
+      acknowledgedAt: new Date().toISOString(),
+    };
+    adminNoticeAcksMap.set(`${noticeId}_${userId}`, ack);
+    saveAdminNoticeAcks();
+
+    try {
+      await supabase.from('admin_notice_acknowledgements').upsert({
+        id: ack.id,
+        notice_id: noticeId,
+        user_id: userId,
+        acknowledged_at: ack.acknowledgedAt,
+      }, { onConflict: 'notice_id,user_id' });
+    } catch (e) {}
+    return true;
+  }
+
+  async getAdminStats(): Promise<AdminDashboardStats> {
+    const t0 = Date.now();
+    let dbStatus: 'healthy' | 'degraded' = 'healthy';
+    let dbLatencyMs = 0;
+    try {
+      const pingRes = await withTimeout(supabase.from('users').select('id').limit(1), 2500);
+      dbLatencyMs = Date.now() - t0;
+      if ((pingRes as any)?.error) dbStatus = 'degraded';
+    } catch (e) {
+      dbLatencyMs = Date.now() - t0;
+      dbStatus = 'degraded';
+    }
+
+    const allUsers = await this.getUsers(true);
+    const now = new Date();
+    const todayStr = now.toISOString().slice(0, 10);
+    const oneWeekAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000);
+
+    const newUsersToday = allUsers.filter(u => u.createdAt && u.createdAt.slice(0, 10) === todayStr).length;
+    const newUsersThisWeek = allUsers.filter(u => u.createdAt && new Date(u.createdAt) >= oneWeekAgo).length;
+
+    const allGroups = await this.getGroups();
+    
+    // Uptime formatting
+    const uptimeSec = Math.floor(process.uptime());
+    const days = Math.floor(uptimeSec / 86400);
+    const hours = Math.floor((uptimeSec % 86400) / 3600);
+    const mins = Math.floor((uptimeSec % 3600) / 60);
+    const uptimeFormatted = days > 0 ? `${days}d ${hours}h ${mins}m` : hours > 0 ? `${hours}h ${mins}m` : `${mins}m ${uptimeSec % 60}s`;
+
+    const memUsage = process.memoryUsage();
+    const memoryMb = Math.round(memUsage.heapUsed / 1024 / 1024);
+
+    let expenseCount = 0;
+    try {
+      const { count } = await supabase.from('expenses').select('*', { count: 'exact', head: true });
+      expenseCount = count || 0;
+    } catch (e) {}
+
+    let settlementCount = 0;
+    try {
+      const { count } = await supabase.from('settlements').select('*', { count: 'exact', head: true });
+      settlementCount = count || 0;
+    } catch (e) {}
+
+    const notices = await this.getAdminNotices();
+    const activeNoticesCount = notices.filter(n => n.isActive).length;
+
+    return {
+      totalUsers: allUsers.length,
+      newUsersToday,
+      newUsersThisWeek,
+      totalGroups: allGroups.length,
+      totalExpenses: expenseCount,
+      totalSettlements: settlementCount,
+      activeNoticesCount,
+      performance: {
+        uptimeSeconds: uptimeSec,
+        uptimeFormatted,
+        memoryUsageMb: memoryMb,
+        databaseLatencyMs: dbLatencyMs,
+        status: dbStatus,
+        nodeVersion: process.version,
+        platform: process.platform,
+        timestamp: new Date().toISOString(),
+      }
+    };
+  }
+
+  async getAdminUsers(): Promise<AdminUserListItem[]> {
+    const users = await this.getUsers(true);
+    const groups = await this.getGroups();
+    const allLogins = await this.getUserLogins(undefined, 2000);
+
+    // Group count per user
+    const userGroupCount = new Map<string, number>();
+    for (const g of groups) {
+      for (const m of g.members) {
+        userGroupCount.set(m.userId, (userGroupCount.get(m.userId) || 0) + 1);
+      }
+    }
+
+    // Login count and latest login per user
+    const userLoginCount = new Map<string, number>();
+    const userLatestLogin = new Map<string, string>();
+    for (const l of allLogins) {
+      userLoginCount.set(l.userId, (userLoginCount.get(l.userId) || 0) + 1);
+      if (!userLatestLogin.has(l.userId)) {
+        userLatestLogin.set(l.userId, l.createdAt);
+      }
+    }
+
+    return users.map((u): AdminUserListItem => ({
+      ...u,
+      groupCount: userGroupCount.get(u.id) || 0,
+      expenseCount: 0,
+      settlementCount: 0,
+      totalLogins: userLoginCount.get(u.id) || 0,
+      lastLoginAt: userLatestLogin.get(u.id) || u.lastLoginAt,
+    })).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async getAdminUserDetail(id: string): Promise<any> {
+    const user = await this.getUserById(id);
+    if (!user) return null;
+
+    const allGroups = await this.getGroups();
+    const userGroups = allGroups.filter(g => g.members.some(m => m.userId === id)).map(g => {
+      const m = g.members.find(mem => mem.userId === id);
+      return {
+        id: g.id,
+        name: g.name,
+        category: g.category,
+        role: m?.role || 'member',
+        joinedAt: m?.joinedAt || g.createdAt,
+      };
+    });
+
+    const recentLogins = await this.getUserLogins(id, 20);
+    const recentActivities = (await this.getActivities(undefined, 50)).filter(a => a.userId === id).slice(0, 20);
+
+    return {
+      user,
+      stats: {
+        groupCount: userGroups.length,
+        expenseCount: 0,
+        settlementCount: 0,
+        totalLogins: (await this.getUserLogins(id, 1000)).length,
+      },
+      groups: userGroups,
+      recentLogins,
+      recentActivities,
+    };
   }
 
   // ─── Utility ──────────────────────────────────────────────────────────────

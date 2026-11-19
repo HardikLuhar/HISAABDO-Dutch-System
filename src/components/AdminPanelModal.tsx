@@ -338,7 +338,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
             }`}
           >
             <Clock className="w-4 h-4" />
-            <span>User Activity & Logins ({logins.length})</span>
+            <span>User Activity & Visits ({logins.length})</span>
           </button>
 
           <button
@@ -568,7 +568,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
                         <th className="py-3 px-4">User</th>
                         <th className="py-3 px-4">User ID</th>
                         <th className="py-3 px-4">Registered Date</th>
-                        <th className="py-3 px-4">Last Login</th>
+                        <th className="py-3 px-4">Last Active</th>
                         <th className="py-3 px-4">Groups</th>
                         <th className="py-3 px-4 text-right">Actions</th>
                       </tr>
@@ -644,25 +644,34 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
                               )}
                             </td>
 
-                            {/* Last Login Time */}
+                            {/* Last Active Time */}
                             <td className="py-3 px-4 text-xs">
                               {user.lastLoginAt ? (
                                 <div>
-                                  <div className="font-medium text-emerald-600 dark:text-emerald-400">
-                                    {new Date(user.lastLoginAt).toLocaleDateString(undefined, {
-                                      month: 'short',
-                                      day: 'numeric'
-                                    })}
-                                  </div>
-                                  <div className="text-[10px] text-slate-400">
-                                    {new Date(user.lastLoginAt).toLocaleTimeString(undefined, {
-                                      hour: '2-digit',
-                                      minute: '2-digit'
-                                    })}
-                                  </div>
+                                  {Date.now() - new Date(user.lastLoginAt).getTime() < 15 * 60 * 1000 ? (
+                                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold text-[11px] border border-emerald-500/20">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                      Active now
+                                    </span>
+                                  ) : (
+                                    <>
+                                      <div className="font-medium text-emerald-600 dark:text-emerald-400">
+                                        {new Date(user.lastLoginAt).toLocaleDateString(undefined, {
+                                          month: 'short',
+                                          day: 'numeric'
+                                        })}
+                                      </div>
+                                      <div className="text-[10px] text-slate-400">
+                                        {new Date(user.lastLoginAt).toLocaleTimeString(undefined, {
+                                          hour: '2-digit',
+                                          minute: '2-digit'
+                                        })}
+                                      </div>
+                                    </>
+                                  )}
                                 </div>
                               ) : (
-                                <span className="text-slate-400 text-[11px]">Never recorded</span>
+                                <span className="text-slate-400 text-[11px]">Never seen</span>
                               )}
                             </td>
 
@@ -728,14 +737,14 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
             </div>
           )}
 
-          {/* TAB 3: USER ACTIVITY & LOGINS */}
+          {/* TAB 3: USER ACTIVITY & VISITS */}
           {activeTab === 'activity' && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-base font-bold">User Login History & Activity</h3>
+                  <h3 className="text-base font-bold">User Activity & Visit History</h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Live audit trail of user authentications and system entries
+                    Live audit trail of user sessions, site visits, and authentication events
                   </p>
                 </div>
                 <div className="text-xs font-semibold text-slate-400">
@@ -995,9 +1004,9 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
                     <span className="font-semibold">{new Date(selectedUserDetail.user.createdAt).toLocaleString()}</span>
                   </div>
                   <div>
-                    <span className="text-slate-400 block mb-0.5">Last Login Time</span>
+                    <span className="text-slate-400 block mb-0.5">Last Active / Visited</span>
                     <span className="font-semibold text-emerald-500">
-                      {selectedUserDetail.user.lastLoginAt ? new Date(selectedUserDetail.user.lastLoginAt).toLocaleString() : 'Never'}
+                      {selectedUserDetail.user.lastLoginAt ? new Date(selectedUserDetail.user.lastLoginAt).toLocaleString() : 'Never seen'}
                     </span>
                   </div>
                 </div>
@@ -1023,10 +1032,10 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
                   )}
                 </div>
 
-                {/* Recent Logins */}
+                {/* Recent Visits & Logins */}
                 <div>
                   <h5 className="text-xs font-bold uppercase text-slate-400 tracking-wider mb-2">
-                    Recent Login History ({selectedUserDetail.recentLogins.length})
+                    Recent Visits & Activity ({selectedUserDetail.recentLogins.length})
                   </h5>
                   {selectedUserDetail.recentLogins.length === 0 ? (
                     <p className="text-xs text-slate-400">No login history recorded</p>

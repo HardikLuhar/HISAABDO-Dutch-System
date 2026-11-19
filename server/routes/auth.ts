@@ -269,10 +269,54 @@ authRouter.post('/logout', requireAuth, (req: any, res) => {
   return res.json({ message: 'Logged out successfully' });
 });
 
-// Current User
+// Current User (also auto-refreshes last active timestamp if >= 15 mins since last update)
+const userActivePingCache = new Map<string, number>();
+
 authRouter.get('/me', requireAuth, (req: any, res) => {
   const { passwordHash: _, ...safeUser } = req.user;
+
+  // Auto-refresh last active timestamp if 15 mins have passed
+  const now = Date.now();
+  const lastPing = userActivePingCache.get(req.user.id) || 0;
+  if (now - lastPing >= 15 * 60 * 1000) {
+    userActivePingCache.set(req.user.id, now);
+    db.recordUserLogin(
+      req.user.id,
+      req.user.name,
+      req.user.email,
+      getClientIp(req),
+      (req.headers['user-agent'] as string) || 'Unknown'
+    ).catch(() => {});
+  }
+
   return res.json({ user: safeUser });
+});
+
+// Explicit active ping endpoint (called when user returns to tab, throttled to 15 mins)
+authRouter.post('/ping-active', requireAuth, async (req: any, res) => {
+  try {
+    const userId = req.user.id;
+    const now = Date.now();
+    const lastPing = userActivePingCache.get(userId) || 0;
+
+    if (now - lastPing < 15 * 60 * 1000) {
+      return res.json({ success: true, throttled: true });
+    }
+
+    userActivePingCache.set(userId, now);
+    await db.recordUserLogin(
+      userId,
+      req.user.name,
+      req.user.email,
+      getClientIp(req),
+      (req.headers['user-agent'] as string) || 'Unknown'
+    );
+
+    return res.json({ success: true, updated: true });
+  } catch (err: any) {
+    console.error('ping-active error:', err);
+    return res.status(500).json({ error: err.message || 'Internal server error' });
+  }
 });
 
 // Update Profile

@@ -99,6 +99,12 @@ export const api = {
     return request<{ user: User }>('/api/auth/me');
   },
 
+  async pingActive(): Promise<{ success: boolean; throttled?: boolean; updated?: boolean }> {
+    return request<{ success: boolean; throttled?: boolean; updated?: boolean }>('/api/auth/ping-active', {
+      method: 'POST'
+    });
+  },
+
   async getUsers(): Promise<{ users: User[] }> {
     return request<{ users: User[] }>('/api/auth/users');
   },

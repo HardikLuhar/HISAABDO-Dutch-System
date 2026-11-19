@@ -193,6 +193,33 @@ function HisaabdoMain() {
     checkNotice();
   }, [user?.id]);
 
+  // Track when authenticated user visits the website or switches back to tab (throttled to 15 mins)
+  useEffect(() => {
+    if (!user) return;
+
+    const pingIfDue = () => {
+      try {
+        const lastPing = Number(localStorage.getItem('hisaabdo_last_active_ping') || '0');
+        const now = Date.now();
+        if (now - lastPing >= 15 * 60 * 1000) {
+          localStorage.setItem('hisaabdo_last_active_ping', String(now));
+          api.pingActive().catch(() => {});
+        }
+      } catch (e) {}
+    };
+
+    pingIfDue();
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        pingIfDue();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [user?.id]);
+
   // Load all initial data (Stale-While-Revalidate)
   const loadDashboardData = useCallback(async () => {
     try {

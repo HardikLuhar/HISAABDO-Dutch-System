@@ -511,5 +511,19 @@ export const api = {
     return request<{ success: boolean; message: string }>(`/api/notices/${id}/acknowledge`, {
       method: 'POST'
     });
+  },
+
+  async sendAdminEmail(data: {
+    recipientMode: 'all' | 'selected';
+    selectedUserIds?: string[];
+    subject: string;
+    message: string;
+    actionUrl?: string;
+    actionText?: string;
+  }): Promise<{ success: boolean; result: any; message: string }> {
+    return request<{ success: boolean; result: any; message: string }>('/api/admin/send-email', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
   }
 };

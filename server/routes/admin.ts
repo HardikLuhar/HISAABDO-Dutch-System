@@ -3,6 +3,7 @@ import { db } from '../db.js';
 import { requireAuth } from './auth.js';
 import { checkIsSiteAdmin } from './groups.js';
 import { hashPassword } from '../auth.js';
+import { sendHisaabdoEmail } from '../email.js';
 
 export const adminRouter = Router();
 export const noticesRouter = Router();
@@ -234,6 +235,60 @@ adminRouter.delete('/notices/:id', async (req, res) => {
   } catch (err: any) {
     console.error('delete admin notice error:', err);
     return res.status(500).json({ error: err.message || 'Internal server error' });
+  }
+});
+
+// ─── 6. Broadcast Email Management (Admin only) ──────────────────────────────
+
+adminRouter.post('/send-email', async (req: any, res) => {
+  try {
+    const { recipientMode = 'all', selectedUserIds = [], subject, message, actionUrl, actionText } = req.body;
+
+    if (!subject || !subject.trim()) {
+      return res.status(400).json({ error: 'Email subject is required' });
+    }
+    if (!message || !message.trim()) {
+      return res.status(400).json({ error: 'Email message content is required' });
+    }
+
+    const allUsers = await db.getUsers();
+    let targetUsers: typeof allUsers = [];
+
+    if (recipientMode === 'all') {
+      targetUsers = allUsers;
+    } else {
+      const selectedSet = new Set(selectedUserIds);
+      targetUsers = allUsers.filter(u => selectedSet.has(u.id));
+    }
+
+    // Filter to valid real emails (no local dummy accounts)
+    const validUsers = targetUsers.filter(u => u.email && u.email.includes('@') && !u.email.includes('@hisaabdo.local'));
+
+    if (validUsers.length === 0) {
+      return res.status(400).json({
+        error: 'No valid recipient email addresses found among selected users (dummy @hisaabdo.local accounts were skipped).'
+      });
+    }
+
+    const recipientEmails = validUsers.map(u => u.email);
+
+    const result = await sendHisaabdoEmail({
+      to: recipientEmails,
+      subject: subject.trim(),
+      message: message.trim(),
+      senderName: req.user.name || 'Hardik (Hisaabdo Admin)',
+      actionUrl: actionUrl?.trim() || undefined,
+      actionText: actionText?.trim() || undefined
+    });
+
+    return res.json({
+      success: result.success,
+      result,
+      message: `Email broadcast processed: Successfully sent to ${result.sentCount} of ${result.totalRecipients} recipient(s).`
+    });
+  } catch (err: any) {
+    console.error('admin send-email error:', err);
+    return res.status(500).json({ error: err.message || 'Failed to dispatch emails' });
   }
 });
 

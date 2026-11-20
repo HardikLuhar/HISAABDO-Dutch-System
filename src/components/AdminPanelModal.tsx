@@ -42,7 +42,9 @@ import {
   UserCheck,
   Layers,
   ArrowUpRight,
-  Loader2
+  Loader2,
+  CheckSquare,
+  Square
 } from 'lucide-react';
 
 interface AdminPanelModalProps {
@@ -52,7 +54,7 @@ interface AdminPanelModalProps {
 }
 
 export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClose, currentUser }) => {
-  const [activeTab, setActiveTab] = useState<'analytics' | 'users' | 'activity' | 'notices'>('analytics');
+  const [activeTab, setActiveTab] = useState<'analytics' | 'users' | 'activity' | 'notices' | 'email'>('analytics');
 
   // Data states
   const [stats, setStats] = useState<AdminDashboardStats | null>(null);
@@ -78,6 +80,17 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
   const [noticeMessage, setNoticeMessage] = useState('');
   const [noticePriority, setNoticePriority] = useState<'normal' | 'urgent' | 'info'>('normal');
   const [isSendingNotice, setIsSendingNotice] = useState(false);
+
+  // Email broadcast states
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailMessage, setEmailMessage] = useState('');
+  const [emailRecipientMode, setEmailRecipientMode] = useState<'all' | 'selected'>('all');
+  const [selectedEmailUserIds, setSelectedEmailUserIds] = useState<string[]>([]);
+  const [emailActionUrl, setEmailActionUrl] = useState('https://hisabdo.vercel.app');
+  const [emailActionText, setEmailActionText] = useState('Open Hisaabdo');
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [emailSearchQuery, setEmailSearchQuery] = useState('');
+  const [showEmailPreview, setShowEmailPreview] = useState(false);
 
   // Load initial data
   const loadAllData = async () => {
@@ -248,6 +261,95 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
     }
   };
 
+  // ─── EMAIL BROADCAST HELPERS ────────────────────────────────────────────────
+  const validEmailUsers = useMemo(() => {
+    return users.filter(u => u.email && u.email.includes('@') && !u.email.endsWith('@hisaabdo.local'));
+  }, [users]);
+
+  const toggleSelectEmailUser = (userId: string) => {
+    setSelectedEmailUserIds(prev =>
+      prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]
+    );
+  };
+
+  const selectAllValidEmailUsers = () => {
+    setSelectedEmailUserIds(validEmailUsers.map(u => u.id));
+  };
+
+  const clearSelectedEmailUsers = () => {
+    setSelectedEmailUserIds([]);
+  };
+
+  const filteredUsersForEmail = useMemo(() => {
+    if (!emailSearchQuery.trim()) return users;
+    const q = emailSearchQuery.toLowerCase();
+    return users.filter(u => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q));
+  }, [users, emailSearchQuery]);
+
+  const handleSendAdminEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!emailSubject.trim()) {
+      showMessage('Please enter an email subject', 'error');
+      return;
+    }
+    if (!emailMessage.trim()) {
+      showMessage('Please enter the email message content', 'error');
+      return;
+    }
+
+    if (emailRecipientMode === 'selected' && selectedEmailUserIds.length === 0) {
+      showMessage('Please select at least one recipient user', 'error');
+      return;
+    }
+
+    const estimatedCount = emailRecipientMode === 'all'
+      ? validEmailUsers.length
+      : selectedEmailUserIds.filter(id => {
+          const u = users.find(user => user.id === id);
+          return u && !u.email.endsWith('@hisaabdo.local');
+        }).length;
+
+    if (estimatedCount === 0) {
+      showMessage('No valid real email recipients found (all selected are dummy @hisaabdo.local accounts)', 'error');
+      return;
+    }
+
+    const confirmMsg = emailRecipientMode === 'all'
+      ? `Send this Hisaabdo email to ALL registered users (~${estimatedCount} recipients)?`
+      : `Send this Hisaabdo email to ${estimatedCount} selected user(s)?`;
+
+    if (!window.confirm(confirmMsg)) {
+      return;
+    }
+
+    setIsSendingEmail(true);
+    try {
+      const res = await api.sendAdminEmail({
+        recipientMode: emailRecipientMode,
+        selectedUserIds: emailRecipientMode === 'selected' ? selectedEmailUserIds : undefined,
+        subject: emailSubject.trim(),
+        message: emailMessage.trim(),
+        actionUrl: emailActionUrl.trim() || undefined,
+        actionText: emailActionText.trim() || undefined
+      });
+
+      if (res.success) {
+        showMessage(res.message || 'Emails dispatched successfully!');
+        setEmailSubject('');
+        setEmailMessage('');
+        setSelectedEmailUserIds([]);
+        setShowEmailPreview(false);
+      } else {
+        showMessage(res.message || 'Failed to dispatch emails', 'error');
+      }
+    } catch (err: any) {
+      console.error('Failed to send admin email:', err);
+      showMessage(err.response?.data?.error || err.message || 'Failed to send email', 'error');
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -351,6 +453,18 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
           >
             <Bell className="w-4 h-4" />
             <span>Admin Notices ({notices.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('email')}
+            className={`py-3.5 px-3.5 sm:px-4 text-xs sm:text-sm font-bold flex items-center gap-2 border-b-2 transition cursor-pointer whitespace-nowrap ${
+              activeTab === 'email'
+                ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
+                : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+          >
+            <Mail className="w-4 h-4" />
+            <span>Make Email</span>
           </button>
         </div>
 
@@ -954,6 +1068,351 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
                       </div>
                     ))
                   )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 5: MAKE EMAIL / DISPATCH EMAIL */}
+          {activeTab === 'email' && (
+            <div className="space-y-6">
+              {/* Header Card */}
+              <div className="p-5 rounded-3xl bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-slate-900/10 border border-emerald-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                  <div className="p-3 rounded-2xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/20">
+                    <Mail className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-black text-lg text-slate-900 dark:text-white flex items-center gap-2">
+                      Make & Send Email
+                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+                        Admin Emailer
+                      </span>
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      Send clean, dark/emerald themed emails directly from Hardik's email (<code className="text-emerald-600 dark:text-emerald-400 font-mono">farziemailhaiyemera@gmail.com</code>).
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <div className="px-3.5 py-2 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                    <span className="text-emerald-500 font-bold">{validEmailUsers.length}</span> Users With Real Email
+                  </div>
+                </div>
+              </div>
+
+              {/* Main Form & Live Preview Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                {/* Left Column: Form Controls (7 cols on lg) */}
+                <form onSubmit={handleSendAdminEmail} className="lg:col-span-7 space-y-5">
+                  {/* Recipient Selection */}
+                  <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                        <Users className="w-3.5 h-3.5 text-emerald-500" />
+                        Recipient Audience
+                      </label>
+                      <span className="text-xs font-medium text-slate-400">
+                        {emailRecipientMode === 'all' 
+                          ? `Broadcasting to all (${validEmailUsers.length} users)` 
+                          : `${selectedEmailUserIds.length} recipient(s) selected`}
+                      </span>
+                    </div>
+
+                    {/* Mode Buttons */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setEmailRecipientMode('all')}
+                        className={`p-3.5 rounded-2xl border text-left transition flex items-center justify-between cursor-pointer ${
+                          emailRecipientMode === 'all'
+                            ? 'border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shadow-xs'
+                            : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 text-slate-700 dark:text-slate-300'
+                        }`}
+                      >
+                        <div>
+                          <div className="text-xs font-bold flex items-center gap-2">
+                            <span>Everyone</span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-emerald-500/20 font-mono">
+                              {validEmailUsers.length}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-400 mt-0.5">Send to all registered users</p>
+                        </div>
+                        {emailRecipientMode === 'all' && <CheckCircle2 className="w-4 h-4 text-emerald-500" />}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setEmailRecipientMode('selected')}
+                        className={`p-3.5 rounded-2xl border text-left transition flex items-center justify-between cursor-pointer ${
+                          emailRecipientMode === 'selected'
+                            ? 'border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shadow-xs'
+                            : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 text-slate-700 dark:text-slate-300'
+                        }`}
+                      >
+                        <div>
+                          <div className="text-xs font-bold flex items-center gap-2">
+                            <span>Selected Person</span>
+                            {selectedEmailUserIds.length > 0 && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-emerald-500/20 font-mono">
+                                {selectedEmailUserIds.length}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-slate-400 mt-0.5">Pick specific user(s)</p>
+                        </div>
+                        {emailRecipientMode === 'selected' && <CheckCircle2 className="w-4 h-4 text-emerald-500" />}
+                      </button>
+                    </div>
+
+                    {/* Selected Users Picker List */}
+                    {emailRecipientMode === 'selected' && (
+                      <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 space-y-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div className="relative flex-1">
+                            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                            <input
+                              type="text"
+                              value={emailSearchQuery}
+                              onChange={(e) => setEmailSearchQuery(e.target.value)}
+                              placeholder="Search users by name or email..."
+                              className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
+                            />
+                          </div>
+                          <div className="flex items-center gap-2 text-xs">
+                            <button
+                              type="button"
+                              onClick={selectAllValidEmailUsers}
+                              className="px-2.5 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold cursor-pointer transition text-[11px]"
+                            >
+                              Select All ({validEmailUsers.length})
+                            </button>
+                            <button
+                              type="button"
+                              onClick={clearSelectedEmailUsers}
+                              className="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-600 dark:text-slate-400 font-bold cursor-pointer transition text-[11px]"
+                            >
+                              Clear
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* List */}
+                        <div className="max-h-56 overflow-y-auto space-y-1.5 pr-1">
+                          {filteredUsersForEmail.length === 0 ? (
+                            <p className="text-xs text-slate-400 text-center py-4">No users match your search.</p>
+                          ) : (
+                            filteredUsersForEmail.map(u => {
+                              const isSelected = selectedEmailUserIds.includes(u.id);
+                              const isLocal = u.email.endsWith('@hisaabdo.local');
+                              return (
+                                <div
+                                  key={u.id}
+                                  onClick={() => !isLocal && toggleSelectEmailUser(u.id)}
+                                  className={`p-2.5 rounded-xl border flex items-center justify-between gap-3 transition cursor-pointer ${
+                                    isLocal
+                                      ? 'opacity-40 bg-slate-50 dark:bg-slate-900/40 border-slate-200/50 dark:border-slate-800/50 cursor-not-allowed'
+                                      : isSelected
+                                      ? 'bg-emerald-500/10 border-emerald-500/40'
+                                      : 'bg-slate-50/50 dark:bg-slate-800/40 border-slate-200/60 dark:border-slate-800 hover:border-slate-300'
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-2.5 min-w-0">
+                                    <div className="shrink-0 text-slate-400">
+                                      {isSelected ? (
+                                        <CheckSquare className="w-4 h-4 text-emerald-500" />
+                                      ) : (
+                                        <Square className="w-4 h-4" />
+                                      )}
+                                    </div>
+                                    <img
+                                      src={u.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.name}`}
+                                      alt={u.name}
+                                      className="w-7 h-7 rounded-lg object-cover shrink-0"
+                                    />
+                                    <div className="min-w-0">
+                                      <div className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+                                        {u.name}
+                                      </div>
+                                      <div className="text-[11px] text-slate-400 font-mono truncate">
+                                        {u.email}
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {isLocal ? (
+                                    <span className="text-[10px] text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-md font-semibold shrink-0">
+                                      No real email
+                                    </span>
+                                  ) : isSelected ? (
+                                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded-md font-bold shrink-0">
+                                      Selected
+                                    </span>
+                                  ) : null}
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Subject & Content Input */}
+                  <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+                        Email Subject *
+                      </label>
+                      <input
+                        type="text"
+                        value={emailSubject}
+                        onChange={(e) => setEmailSubject(e.target.value)}
+                        placeholder="e.g. Welcome to Hisaabdo! / Important Notice"
+                        className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-medium focus:ring-2 focus:ring-emerald-500 outline-none"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+                        Email Message Body *
+                      </label>
+                      <textarea
+                        value={emailMessage}
+                        onChange={(e) => setEmailMessage(e.target.value)}
+                        placeholder="Write your email announcement or update message here...&#10;&#10;Hi everyone,&#10;We are pleased to announce..."
+                        rows={6}
+                        className="w-full px-4 py-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:ring-2 focus:ring-emerald-500 outline-none leading-relaxed resize-y font-normal"
+                        required
+                      />
+                      <p className="text-[11px] text-slate-400 mt-1">
+                        Formatted in clean paragraphs with personalized recipient greeting and official Hisaabdo signature.
+                      </p>
+                    </div>
+
+                    {/* Optional Action Button */}
+                    <div className="pt-2 border-t border-slate-100 dark:border-slate-800 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                          Button Text (Optional)
+                        </label>
+                        <input
+                          type="text"
+                          value={emailActionText}
+                          onChange={(e) => setEmailActionText(e.target.value)}
+                          placeholder="e.g. Open Hisaabdo"
+                          className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                          Button URL (Optional)
+                        </label>
+                        <input
+                          type="url"
+                          value={emailActionUrl}
+                          onChange={(e) => setEmailActionUrl(e.target.value)}
+                          placeholder="https://hisabdo.vercel.app"
+                          className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions & Submit */}
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setShowEmailPreview(!showEmailPreview)}
+                      className="px-4 py-2.5 rounded-2xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-center gap-2 cursor-pointer transition"
+                    >
+                      <Eye className="w-4 h-4 text-emerald-500" />
+                      <span>{showEmailPreview ? 'Hide Live Preview' : 'Show Live Preview'}</span>
+                    </button>
+
+                    <button
+                      type="submit"
+                      disabled={isSendingEmail || !emailSubject.trim() || !emailMessage.trim() || (emailRecipientMode === 'selected' && selectedEmailUserIds.length === 0)}
+                      className="px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 cursor-pointer transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isSendingEmail ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Sending Emails...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Send className="w-4 h-4" />
+                          <span>
+                            {emailRecipientMode === 'all'
+                              ? `Send Email to Everyone (${validEmailUsers.length})`
+                              : `Send Email to Selected (${selectedEmailUserIds.length})`}
+                          </span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+
+                {/* Right Column: Live Email Preview (5 cols on lg) */}
+                <div className={`lg:col-span-5 ${showEmailPreview ? 'block' : 'hidden lg:block'}`}>
+                  <div className="sticky top-4 space-y-3">
+                    <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-400">
+                      <span className="flex items-center gap-1.5">
+                        <Eye className="w-3.5 h-3.5 text-emerald-500" />
+                        Live Theme Preview
+                      </span>
+                      <span className="text-[10px] text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full lowercase">
+                        emerald theme
+                      </span>
+                    </div>
+
+                    {/* Email Card Mockup */}
+                    <div className="rounded-3xl border border-slate-800 bg-[#06120e] p-5 shadow-2xl text-slate-100 overflow-hidden text-xs">
+                      {/* Top Header Mockup */}
+                      <div className="text-center pb-4 border-b border-emerald-950/80">
+                        <div className="inline-block px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black text-xs tracking-wider mb-2 shadow-md">
+                          HISABDO
+                        </div>
+                        <h4 className="font-extrabold text-sm text-white tracking-wide">
+                          {emailSubject.trim() || 'Your Subject Here'}
+                        </h4>
+                        <p className="text-[10px] text-emerald-400 mt-0.5">Official Announcement</p>
+                      </div>
+
+                      {/* Recipient Greeting Preview */}
+                      <div className="py-4 space-y-3">
+                        <p className="text-slate-300 font-semibold text-xs">
+                          Hello, <span className="text-emerald-400 font-bold">{emailRecipientMode === 'all' ? '[User Name]' : (users.find(u => u.id === selectedEmailUserIds[0])?.name || '[User Name]')}</span>
+                        </p>
+
+                        <div className="p-3.5 rounded-2xl bg-[#0b1a15] border border-emerald-900/40 text-slate-200 text-xs leading-relaxed whitespace-pre-wrap">
+                          {emailMessage.trim() || 'This is how your email message will appear inside the clean emerald card... Paragraphs and formatting are preserved.'}
+                        </div>
+
+                        {emailActionText && emailActionUrl && (
+                          <div className="text-center pt-2">
+                            <span className="inline-block px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black text-xs shadow-md">
+                              {emailActionText}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Footer Preview */}
+                      <div className="pt-4 border-t border-emerald-950/80 text-center space-y-1">
+                        <p className="text-[10px] text-slate-500">
+                          Sent by {currentUser?.name || 'Hardik'} via Hisaabdo
+                        </p>
+                        <p className="text-[9px] text-slate-600">
+                          Smart Expense Splitting & Debt Tracking
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

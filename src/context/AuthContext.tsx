@@ -5,7 +5,7 @@ import { api, getStoredToken } from '../services/api';
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
-  quickStart: (name: string, preferredCurrency?: CurrencyCode, password?: string, email?: string) => Promise<void>;
+  quickStart: (name: string, preferredCurrency?: CurrencyCode, password?: string) => Promise<void>;
   login: (identifier: string, password: string) => Promise<void>;
   register: (data: any) => Promise<void>;
   logout: () => Promise<void>;
@@ -71,8 +71,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initAuth();
   }, []);
 
-  const quickStart = async (name: string, preferredCurrency: CurrencyCode = 'INR', password?: string, email?: string) => {
-    const res = await api.quickStart(name, preferredCurrency, password, email);
+  const quickStart = async (name: string, preferredCurrency: CurrencyCode = 'INR', password?: string) => {
+    const res = await api.quickStart(name, preferredCurrency, password);
     saveCachedUser(res.user);
   };
 

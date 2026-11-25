@@ -43,7 +43,7 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
 
   const catMeta = getCategoryMeta(expense.category);
   const isCreator = Boolean(user?.id && expense.createdBy === user.id);
-  const isHardik = Boolean((user?.name && user.name.trim().toLowerCase() === 'hardik') || (user?.email && user.email.toLowerCase().includes('hardik')));
+  const isHardik = Boolean((user?.name && user.name.trim().toLowerCase() === 'hardik') || user?.id === 'usr_1790144443747_nlsoi');
   const canManage = isCreator || isHardik;
 
   const handleDeleteExpense = async () => {

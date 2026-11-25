@@ -258,7 +258,6 @@ function rowToUser(row: any): User {
   return {
     id: row.id,
     name: row.name,
-    email: row.email,
     passwordHash: row.password_hash ?? '',
     avatarUrl: row.avatar_url ?? '',
     phone: row.phone ?? undefined,
@@ -396,63 +395,34 @@ class Database {
     return rowToUser(data);
   }
 
-  async getUserByEmail(email: string): Promise<User | undefined> {
-    const clean = (email || '').toLowerCase().trim();
-    if (!clean) return undefined;
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .ilike('email', clean)
-      .maybeSingle();
-    if (error || !data) return undefined;
-    return rowToUser(data);
-  }
-
   async findUserByIdentifier(identifier: string): Promise<User | undefined> {
     const clean = (identifier || '').trim();
     if (!clean) return undefined;
     const cleanLower = clean.toLowerCase();
 
-    // 1. Exact email match (case-insensitive)
+    // 1. Exact name match (case-insensitive)
     let { data } = await supabase
       .from('users')
       .select('*')
-      .ilike('email', cleanLower)
+      .ilike('name', cleanLower)
       .maybeSingle();
     if (data) return rowToUser(data);
 
-    // 2. Exact name match (case-insensitive)
-    ({ data } = await supabase
-      .from('users')
-      .select('*')
-      .ilike('name', cleanLower)
-      .maybeSingle());
-    if (data) return rowToUser(data);
+    // 2. Exact phone match if provided
+    if (/^\+?[0-9\s-]+$/.test(clean) && clean.replace(/\D/g, '').length >= 5) {
+      const cleanPhone = clean.replace(/\D/g, '');
+      const allUsers = await this.getUsers();
+      const byPhone = allUsers.find(u => u.phone && u.phone.replace(/\D/g, '') === cleanPhone);
+      if (byPhone) return byPhone;
+    }
 
     // 3. Broader search — fetch all users and do in-memory matching for edge cases
     const allUsers = await this.getUsers();
 
     // Name match with collapsed spaces
     const collapsed = cleanLower.replace(/\s+/g, ' ');
-    let user = allUsers.find(u => (u.name || '').trim().toLowerCase().replace(/\s+/g, ' ') === collapsed);
+    const user = allUsers.find(u => (u.name || '').trim().toLowerCase().replace(/\s+/g, ' ') === collapsed);
     if (user) return user;
-
-    // Email prefix matching
-    if (cleanLower.includes('@')) {
-      const prefix = cleanLower.split('@')[0];
-      user = allUsers.find(u =>
-        (u.name || '').trim().toLowerCase() === prefix ||
-        (u.email || '').toLowerCase().startsWith(prefix + '_') ||
-        (u.email || '').toLowerCase().startsWith(prefix + '@')
-      );
-      if (user) return user;
-    } else {
-      user = allUsers.find(u =>
-        (u.email || '').toLowerCase().startsWith(cleanLower + '_') ||
-        (u.email || '').toLowerCase().startsWith(cleanLower + '@')
-      );
-      if (user) return user;
-    }
 
     return undefined;
   }
@@ -463,7 +433,7 @@ class Database {
     const allUsers = await this.getUsers();
     return allUsers.filter(u =>
       (u.name || '').toLowerCase().startsWith(clean) ||
-      (u.email || '').toLowerCase().startsWith(clean)
+      (u.phone || '').includes(clean)
     );
   }
 
@@ -482,7 +452,6 @@ class Database {
     const insertData: any = {
       id: user.id,
       name: user.name,
-      email: user.email,
       password_hash: user.passwordHash || '',
       avatar_url: user.avatarUrl || '',
       phone: user.phone || null,
@@ -495,6 +464,14 @@ class Database {
     let { error } = await supabase
       .from('users')
       .insert(insertData);
+
+    // If the database still has an old NOT NULL constraint on email before migration 009 is run,
+    // safely provide a fallback unique string so creation never fails.
+    if (error && error.message && error.message.includes('email')) {
+      insertData.email = `${user.id}@hisaabdo.local`;
+      const retry = await supabase.from('users').insert(insertData);
+      error = retry.error;
+    }
 
     if (error && insertData.upi_id) {
       delete insertData.upi_id;
@@ -523,7 +500,6 @@ class Database {
 
     const dbUpdates: any = {};
     if (updates.name !== undefined) dbUpdates.name = updates.name;
-    if (updates.email !== undefined) dbUpdates.email = updates.email;
     if (updates.passwordHash !== undefined) dbUpdates.password_hash = updates.passwordHash;
     if (updates.avatarUrl !== undefined) dbUpdates.avatar_url = updates.avatarUrl;
     if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
@@ -1746,12 +1722,11 @@ class Database {
 
   // ─── Admin Panel Operations ──────────────────────────────────────────────
 
-  async recordUserLogin(userId: string, userName: string, userEmail: string, ipAddress?: string, userAgent?: string): Promise<UserLoginRecord> {
+  async recordUserLogin(userId: string, userName: string, ipAddress?: string, userAgent?: string): Promise<UserLoginRecord> {
     const record: UserLoginRecord = {
       id: `login_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
       userId,
       userName,
-      userEmail,
       ipAddress: ipAddress || 'Unknown',
       userAgent: userAgent || 'Unknown',
       createdAt: new Date().toISOString(),
@@ -1767,7 +1742,6 @@ class Database {
         id: record.id,
         user_id: record.userId,
         user_name: record.userName,
-        user_email: record.userEmail,
         ip_address: record.ipAddress,
         user_agent: record.userAgent,
         created_at: record.createdAt,
@@ -1790,7 +1764,6 @@ class Database {
           id: r.id,
           userId: r.user_id,
           userName: r.user_name || 'Unknown',
-          userEmail: r.user_email || '',
           ipAddress: r.ip_address || 'Unknown',
           userAgent: r.user_agent || 'Unknown',
           createdAt: r.created_at,

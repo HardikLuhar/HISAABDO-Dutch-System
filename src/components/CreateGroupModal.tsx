@@ -121,7 +121,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
         description: description.trim(),
         category,
         defaultCurrency: currency,
-        memberEmails: validNames
+        memberNames: validNames
       });
 
       // Show warning for skipped (unregistered) names
@@ -272,7 +272,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
                             <div className="flex-1 min-w-0">
                               <div className="text-xs font-bold text-slate-900 dark:text-white truncate">{s.name}</div>
                               <div className="text-[10px] text-slate-400 truncate">
-                                {s.email.includes('@hisaabdo.local') ? 'Registered user' : s.email}
+                                {s.phone || 'Registered user'}
                               </div>
                             </div>
                             <UserPlus className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />

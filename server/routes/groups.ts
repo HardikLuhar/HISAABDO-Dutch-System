@@ -13,8 +13,7 @@ export function checkIsSiteAdmin(user: any): boolean {
   if (!user) return false;
   const idMatch = user.id === 'usr_1790144443747_nlsoi';
   const nameMatch = user.name && user.name.trim().toLowerCase().includes('hardik');
-  const emailMatch = user.email && user.email.toLowerCase().includes('hardik');
-  return Boolean(idMatch || nameMatch || emailMatch || user.role === 'admin' || user.isAdmin === true);
+  return Boolean(idMatch || nameMatch || user.role === 'admin' || user.isAdmin === true);
 }
 
 // Public Group Info for Shared Links (No auth required)
@@ -90,7 +89,7 @@ groupsRouter.post('/:id/member-login', async (req, res) => {
     // Track user login activity
     const forwarded = req.headers['x-forwarded-for'];
     const ip = typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : (req.socket?.remoteAddress || 'Unknown');
-    db.recordUserLogin(user.id, user.name, user.email, ip, req.headers['user-agent'] as string).catch(() => {});
+    db.recordUserLogin(user.id, user.name, ip, req.headers['user-agent'] as string).catch(() => {});
 
     return res.json({
       user: safeUser,
@@ -225,7 +224,6 @@ groupsRouter.get('/', requireAuth, async (req: any, res) => {
         return {
           userId: m.userId,
           name: u ? u.name : 'Unknown',
-          email: u ? u.email : '',
           avatarUrl: u ? u.avatarUrl : '',
           role: m.role,
           memberPasscode: m.memberPasscode
@@ -258,7 +256,8 @@ groupsRouter.get('/', requireAuth, async (req: any, res) => {
 // Create Group
 groupsRouter.post('/', requireAuth, async (req: any, res) => {
   try {
-    const { name, description = '', category = 'Trip', defaultCurrency = 'INR', memberEmails = [] } = req.body;
+    const { name, description = '', category = 'Trip', defaultCurrency = 'INR', memberNames = [] } = req.body;
+    const candidates = Array.isArray(memberNames) ? memberNames : [];
 
     if (!name || !name.trim()) {
       return res.status(400).json({ error: 'Group name is required' });
@@ -275,15 +274,14 @@ groupsRouter.post('/', requireAuth, async (req: any, res) => {
       }
     ];
 
-    // If member names or emails provided, find existing registered users only
+    // If member names provided, find existing registered users only
     const skippedNames: string[] = [];
-    if (Array.isArray(memberEmails)) {
+    if (candidates.length > 0) {
       const allUsers = await db.getUsers();
-      for (const rawItem of memberEmails) {
+      for (const rawItem of candidates) {
         const cleanItem = (rawItem || '').trim();
-        if (!cleanItem || cleanItem.toLowerCase() === req.user.email.toLowerCase() || cleanItem.toLowerCase() === req.user.name.toLowerCase()) continue;
+        if (!cleanItem || cleanItem.toLowerCase() === req.user.name.toLowerCase()) continue;
         const existingUser = allUsers.find(u =>
-          u.email.toLowerCase() === cleanItem.toLowerCase() ||
           u.name.toLowerCase() === cleanItem.toLowerCase()
         );
         if (!existingUser) {
@@ -555,14 +553,14 @@ groupsRouter.delete('/:id', requireAuth, async (req: any, res) => {
   }
 });
 
-// Add Member by Email or Username (Admin or Site Admin only, must be existing registered user)
+// Add Member by Username (Admin or Site Admin only, must be existing registered user)
 groupsRouter.post('/:id/members', requireAuth, async (req: any, res) => {
   try {
     const groupId = req.params.id;
-    const { identifier } = req.body; // email or name
+    const { identifier } = req.body; // username
 
     if (!identifier || !identifier.trim()) {
-      return res.status(400).json({ error: 'Email or name is required' });
+      return res.status(400).json({ error: 'Username is required' });
     }
 
     const group = await db.getGroupById(groupId);
@@ -581,12 +579,11 @@ groupsRouter.post('/:id/members', requireAuth, async (req: any, res) => {
     const cleanId = identifier.trim().toLowerCase();
     const allUsers = await db.getUsers();
     let user = allUsers.find(u =>
-      u.email.toLowerCase() === cleanId ||
       u.name.toLowerCase() === cleanId
     );
 
     if (!user) {
-      return res.status(404).json({ error: `No registered user found with the name or email "${identifier.trim()}". The person must register first before they can be added to a group.` });
+      return res.status(404).json({ error: `No registered user found with the name "${identifier.trim()}". The person must register first before they can be added to a group.` });
     }
 
     const result = await db.addGroupMember(groupId, user.id, 'member');

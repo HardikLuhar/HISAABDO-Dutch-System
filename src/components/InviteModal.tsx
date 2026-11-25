@@ -73,7 +73,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({
   const isGroupAdmin = members.some(m => m.userId === user?.id && m.role === 'admin');
   const isSiteAdmin = Boolean(
     (user?.name && user.name.trim().toLowerCase() === 'hardik') ||
-    (user?.email && user.email.toLowerCase().includes('hardik'))
+    user?.id === 'usr_1790144443747_nlsoi'
   );
   const canAddMembers = isGroupAdmin || isSiteAdmin;
 
@@ -478,7 +478,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({
                                 {s.name}
                               </div>
                               <div className="text-[10px] text-slate-400 dark:text-slate-500 truncate">
-                                {s.email.includes('@hisaabdo.local') ? 'Registered user' : s.email}
+                                {s.phone || 'Registered user'}
                               </div>
                             </div>
                             <UserPlus className="w-4 h-4 text-emerald-500 flex-shrink-0" />

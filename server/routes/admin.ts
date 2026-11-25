@@ -61,7 +61,7 @@ adminRouter.get('/users/:id', async (req, res) => {
 adminRouter.put('/users/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, email, phone, upiId, preferredCurrency, avatarUrl } = req.body;
+    const { name, phone, upiId, preferredCurrency, avatarUrl } = req.body;
 
     const existing = await db.getUserById(id);
     if (!existing) {
@@ -79,7 +79,6 @@ adminRouter.put('/users/:id', async (req, res) => {
       }
       updates.name = cleanName;
     }
-    if (email && email.trim()) updates.email = email.trim().toLowerCase();
     if (phone !== undefined) updates.phone = phone ? phone.trim() : null;
     if (upiId !== undefined) updates.upiId = upiId ? upiId.trim() : '';
     if (preferredCurrency) updates.preferredCurrency = preferredCurrency;

@@ -114,7 +114,7 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
   const handleConfirmDeleteExpense = async () => {
     if (!expenseToDelete) return;
     const isCreator = expenseToDelete.createdBy === user?.id;
-    const isHardik = Boolean((user?.name && user.name.trim().toLowerCase() === 'hardik') || (user?.email && user.email.toLowerCase().includes('hardik')));
+    const isHardik = Boolean((user?.name && user.name.trim().toLowerCase() === 'hardik') || user?.id === 'usr_1790144443747_nlsoi');
     if (!isCreator && !isHardik && !isAdmin) {
       showToast('Only the member who added this expense entry (or admin) can delete it', 'error');
       setExpenseToDelete(null);
@@ -139,7 +139,7 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
 
   const group = groupData.group;
   const currency = group.defaultCurrency;
-  const isHardik = Boolean((user?.name && user.name.trim().toLowerCase() === 'hardik') || (user?.email && user.email.toLowerCase().includes('hardik')));
+  const isHardik = Boolean((user?.name && user.name.trim().toLowerCase() === 'hardik') || user?.id === 'usr_1790144443747_nlsoi');
   const isEnrolledMember = group.members.some(m => m.userId === user?.id);
   const isAdmin = isHardik || group.members.some(m => m.userId === user?.id && m.role === 'admin');
 
@@ -600,7 +600,7 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
                       const myPayment = exp.paidBy.find(p => p.userId === user?.id);
                       const primaryPayer = exp.paidBy[0];
                       const isCreator = user?.id === exp.createdBy;
-                      const isHardik = Boolean((user?.name && user.name.trim().toLowerCase() === 'hardik') || (user?.email && user.email.toLowerCase().includes('hardik')));
+                      const isHardik = Boolean((user?.name && user.name.trim().toLowerCase() === 'hardik') || user?.id === 'usr_1790144443747_nlsoi');
                       const canManageExpense = isCreator || isHardik || isAdmin;
                       const payerName = primaryPayer?.userName && primaryPayer.userName !== 'Unknown'
                         ? primaryPayer.userName
@@ -827,7 +827,6 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
                               const targetUser = allUsers.find(u => u.id === debt.toUserId) || {
                                 id: debt.toUserId,
                                 name: debt.toName,
-                                email: '',
                                 avatarUrl: debt.toAvatar || '',
                               };
                               setSelectedMemberProfile(targetUser as User);
@@ -841,7 +840,6 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
                                 const targetUser = allUsers.find(u => u.id === debt.toUserId) || {
                                   id: debt.toUserId,
                                   name: debt.toName,
-                                  email: '',
                                   avatarUrl: debt.toAvatar || '',
                                 };
                                 setSelectedMemberProfile(targetUser as User);
@@ -876,7 +874,6 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
                               const targetUser = allUsers.find(u => u.id === debt.toUserId) || {
                                 id: debt.toUserId,
                                 name: debt.toName,
-                                email: '',
                                 avatarUrl: debt.toAvatar || '',
                               };
                               setSelectedMemberProfile(targetUser as User);
@@ -955,7 +952,6 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
                             const found = allUsers.find(u => u.id === b.userId) || {
                               id: b.userId,
                               name: b.name,
-                              email: b.email,
                               avatarUrl: b.avatarUrl || ''
                             };
                             setSelectedMemberProfile(found as User);
@@ -973,7 +969,6 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
                               <span>{b.name} {b.userId === user?.id && '(You)'}</span>
                               <CreditCard className="w-3 h-3 text-indigo-500 flex-shrink-0" title="UPI Payment Details" />
                             </span>
-                            <span className="text-[10px] text-slate-400">{b.email}</span>
                           </div>
                         </div>
                       </td>
@@ -1172,7 +1167,6 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
             return {
               userId: m.userId,
               name: u?.name || 'Member',
-              email: u?.email || '',
               avatarUrl: u?.avatarUrl || '',
               role: m.role,
             };
@@ -1190,7 +1184,7 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
                 <h3 className="font-bold text-slate-900 text-base">Group Members ({group.members.length})</h3>
                 <p className="text-xs text-slate-500">People participating in this group's expenses</p>
               </div>
-              {(isAdmin || Boolean((user?.name && user.name.trim().toLowerCase() === 'hardik') || (user?.email && user.email.toLowerCase().includes('hardik')))) && (
+              {(isAdmin || Boolean((user?.name && user.name.trim().toLowerCase() === 'hardik') || user?.id === 'usr_1790144443747_nlsoi')) && (
                 <button
                   onClick={() => onOpenInvite(group.id)}
                   className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-xs font-semibold border border-emerald-200 transition cursor-pointer"
@@ -1214,7 +1208,6 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
                           const profile: User = memberUser || {
                             id: m.userId,
                             name: memberUser?.name || 'Member',
-                            email: memberUser?.email || '',
                             avatarUrl: memberUser?.avatarUrl || '',
                             phone: memberUser?.phone,
                             upiId: memberUser?.upiId
@@ -1241,7 +1234,6 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
                               const profile: User = memberUser || {
                                 id: m.userId,
                                 name: memberUser?.name || 'Member',
-                                email: memberUser?.email || '',
                                 avatarUrl: memberUser?.avatarUrl || '',
                                 phone: memberUser?.phone,
                                 upiId: memberUser?.upiId
@@ -1260,7 +1252,6 @@ export const GroupDetailView: React.FC<GroupDetailProps> = ({
                               const profile: User = memberUser || {
                                 id: m.userId,
                                 name: memberUser?.name || 'Member',
-                                email: memberUser?.email || '',
                                 avatarUrl: memberUser?.avatarUrl || '',
                                 phone: memberUser?.phone,
                                 upiId: memberUser?.upiId

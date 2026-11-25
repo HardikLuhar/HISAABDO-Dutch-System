@@ -211,7 +211,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                   Active Avatar
                 </span>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{user.email}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{user.phone || `@${user.name}`}</p>
               <p className="text-[11px] text-emerald-700 dark:text-emerald-400 mt-1 font-medium flex items-center gap-1 truncate">
                 <Sparkles className="w-3 h-3 shrink-0" /> {DEFAULT_AVATARS.length}+ curated icons • Movies, Anime, Gaming & Web selection
               </p>

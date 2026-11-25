@@ -90,7 +90,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     const cleanPass = loginPassword.trim();
 
     if (!cleanId) {
-      showToast('Please enter your name or email', 'error');
+      showToast('Please enter your name or username', 'error');
       return;
     }
     if (!cleanPass) {
@@ -141,7 +141,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     e.preventDefault();
     const cleanId = forgotIdentifier.trim();
     if (!cleanId) {
-      showToast('Please enter your name or email', 'error');
+      showToast('Please enter your name or username', 'error');
       return;
     }
 
@@ -277,20 +277,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   <div className="flex items-start gap-2">
                     <KeyRound className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
                     <p className="text-[11px] text-amber-800 dark:text-amber-300 leading-relaxed">
-                      Enter your <strong>name or email</strong> to look up your account. You'll need to answer your 3 security questions to reset the password.
+                      Enter your <strong>name or username</strong> to look up your account. You'll need to answer your 3 security questions to reset the password.
                     </p>
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Your Name or Email
+                    Your Username / Name
                   </label>
                   <div className="relative">
                     <UserIcon className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
                       type="text"
-                      placeholder="e.g. Hardik, sneha@..."
+                      placeholder="e.g. Hardik, Alex"
                       value={forgotIdentifier}
                       onChange={(e) => setForgotIdentifier(e.target.value)}
                       autoFocus
@@ -441,13 +441,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <form onSubmit={handleLogin} className="p-6 space-y-4">
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Your Name or Email
+                Your Username / Name
               </label>
               <div className="relative">
                 <UserIcon className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
-                  placeholder="e.g. Hardik, Alex, sneha@..."
+                  placeholder="e.g. Hardik, Alex"
                   value={loginIdentifier}
                   onChange={(e) => setLoginIdentifier(e.target.value)}
                   autoFocus

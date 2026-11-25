@@ -56,7 +56,6 @@ function HisaabdoMain() {
     user && (
       user.id === 'usr_1790144443747_nlsoi' ||
       (user.name && user.name.trim().toLowerCase().includes('hardik')) ||
-      (user.email && user.email.toLowerCase().includes('hardik')) ||
       (user as any).role === 'admin' ||
       (user as any).isAdmin === true
     )
@@ -450,7 +449,7 @@ function HisaabdoMain() {
 
   const handleOpenEditExpense = (expense: ExpenseItem) => {
     const isCreator = Boolean(user?.id && expense.createdBy === user.id);
-    const isHardik = Boolean((user?.name && user.name.trim().toLowerCase() === 'hardik') || (user?.email && user.email.toLowerCase().includes('hardik')));
+    const isHardik = Boolean((user?.name && user.name.trim().toLowerCase() === 'hardik') || user?.id === 'usr_1790144443747_nlsoi');
     const isGroupAdmin = groups.find(g => g.id === expense.groupId)?.members.some(m => m.userId === user?.id && m.role === 'admin');
     if (!isCreator && !isHardik && !isGroupAdmin) {
       showToast('Only the member who added this expense (or admin) can edit it', 'error');
@@ -567,7 +566,6 @@ function HisaabdoMain() {
       return {
         userId: m.userId,
         name: m.name || u?.name || 'Member',
-        email: m.email || u?.email || '',
         avatarUrl: m.avatarUrl || u?.avatarUrl || '',
         role: m.role || 'member',
         memberPasscode: m.memberPasscode

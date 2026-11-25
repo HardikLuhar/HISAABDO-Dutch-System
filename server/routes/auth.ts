@@ -39,28 +39,18 @@ function getClientIp(req: any): string {
 // Quick Start / Create Account with verification
 authRouter.post('/quick-start', async (req, res) => {
   try {
-    const { name, email, preferredCurrency = 'INR', password } = req.body;
+    const { name, preferredCurrency = 'INR', password } = req.body;
 
     if (!name || !name.trim()) {
       return res.status(400).json({ error: 'Please enter your name' });
     }
 
     const trimmedName = name.trim();
-    const cleanEmail = email ? email.trim().toLowerCase() : '';
 
-    // Find if user with this email or name already exists
-    let user = cleanEmail ? await db.findUserByIdentifier(cleanEmail) : undefined;
-    if (!user) {
-      user = await db.findUserByIdentifier(trimmedName);
-    }
+    // Find if user with this name already exists
+    let user = await db.findUserByIdentifier(trimmedName);
 
     if (user) {
-      // If account exists, update email if current is auto-generated
-      if (cleanEmail && user.email.includes('@hisaabdo.local')) {
-        await db.updateUser(user.id, { email: cleanEmail });
-        user.email = cleanEmail;
-      }
-
       // Account exists: STRICT VERIFICATION REQUIRED
       const cleanPass = (password || '').trim();
       if (!cleanPass) {
@@ -112,13 +102,11 @@ authRouter.post('/quick-start', async (req, res) => {
 
       const id = `usr_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
       const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(trimmedName)}`;
-      const userEmail = cleanEmail || `${trimmedName.toLowerCase().replace(/[^a-z0-9]/g, '') || 'user'}_${Math.random().toString(36).substr(2, 4)}@hisaabdo.local`;
       const cleanPass = (password || '').trim();
 
       user = await db.createUser({
         id,
         name: trimmedName,
-        email: userEmail,
         passwordHash: cleanPass ? hashPassword(cleanPass) : '',
         avatarUrl,
         preferredCurrency: preferredCurrency as CurrencyCode,
@@ -130,7 +118,7 @@ authRouter.post('/quick-start', async (req, res) => {
     const { passwordHash: _, ...safeUser } = user;
 
     // Track user login activity
-    db.recordUserLogin(user.id, user.name, user.email, getClientIp(req), req.headers['user-agent'] as string).catch(() => {});
+    db.recordUserLogin(user.id, user.name, getClientIp(req), req.headers['user-agent'] as string).catch(() => {});
 
     return res.json({ user: safeUser, token });
   } catch (err: any) {
@@ -139,27 +127,26 @@ authRouter.post('/quick-start', async (req, res) => {
   }
 });
 
-// Register with email and password
+// Register with username and password
 authRouter.post('/register', async (req, res) => {
   try {
-    const { name, email, password, phone, preferredCurrency = 'INR' } = req.body;
+    const { name, password, phone, preferredCurrency = 'INR' } = req.body;
 
-    if (!name || !email || !password) {
-      return res.status(400).json({ error: 'Name, email, and password are required' });
+    if (!name || !password) {
+      return res.status(400).json({ error: 'Name and password are required' });
     }
 
-    const cleanEmail = email.trim().toLowerCase();
-    const existing = await db.findUserByIdentifier(cleanEmail);
+    const trimmedName = name.trim();
+    const existing = await db.findUserByIdentifier(trimmedName);
     if (existing && existing.passwordHash) {
-      return res.status(400).json({ error: 'An account with this email already exists' });
+      return res.status(400).json({ error: 'An account with this name already exists' });
     }
 
     let user: User;
     if (existing && !existing.passwordHash) {
       // Claim existing stub (e.g. invited user)
       const updated = await db.updateUser(existing.id, {
-        name: name.trim(),
-        email: cleanEmail,
+        name: trimmedName,
         passwordHash: hashPassword(password.trim()),
         phone: phone ? phone.trim() : existing.phone,
         preferredCurrency: preferredCurrency as CurrencyCode
@@ -167,21 +154,20 @@ authRouter.post('/register', async (req, res) => {
       user = updated || existing;
     } else {
       // Enforce unique name for brand-new registrations
-      const nameTaken = await db.isNameTaken(name.trim());
+      const nameTaken = await db.isNameTaken(trimmedName);
       if (nameTaken) {
         return res.status(400).json({
-          error: `The name "${name.trim()}" is already taken. Please add a number or variation to make it unique (e.g. "${name.trim()}1").`,
+          error: `The name "${trimmedName}" is already taken. Please add a number or variation to make it unique (e.g. "${trimmedName}1").`,
           nameTaken: true
         });
       }
 
       const id = `usr_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
-      const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`;
+      const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(trimmedName)}`;
 
       user = await db.createUser({
         id,
-        name: name.trim(),
-        email: cleanEmail,
+        name: trimmedName,
         passwordHash: hashPassword(password.trim()),
         avatarUrl,
         phone: phone ? phone.trim() : undefined,
@@ -194,7 +180,7 @@ authRouter.post('/register', async (req, res) => {
     const { passwordHash: _, ...safeUser } = user;
 
     // Track user login activity
-    db.recordUserLogin(user.id, user.name, user.email, getClientIp(req), req.headers['user-agent'] as string).catch(() => {});
+    db.recordUserLogin(user.id, user.name, getClientIp(req), req.headers['user-agent'] as string).catch(() => {});
 
     return res.status(201).json({ user: safeUser, token });
   } catch (err: any) {
@@ -203,23 +189,23 @@ authRouter.post('/register', async (req, res) => {
   }
 });
 
-// Verified Login by Name or Email + Password / Passcode
+// Verified Login by Name / Username + Password / Passcode
 authRouter.post('/login', async (req, res) => {
   try {
-    const { email, identifier, password } = req.body;
-    const loginId = (identifier || email || '').trim();
+    const { identifier, password } = req.body;
+    const loginId = (identifier || '').trim();
 
     if (!loginId || !password) {
-      return res.status(400).json({ error: 'Please enter your name or email and password' });
+      return res.status(400).json({ error: 'Please enter your name and password' });
     }
 
     const cleanPass = password.trim();
 
-    // Find user by email or by name using robust matching
+    // Find user by name / username
     const user = await db.findUserByIdentifier(loginId);
 
     if (!user) {
-      return res.status(401).json({ error: 'No account found with this name or email' });
+      return res.status(401).json({ error: 'No account found with this name' });
     }
 
     let isVerified = false;
@@ -254,7 +240,7 @@ authRouter.post('/login', async (req, res) => {
     const { passwordHash: _, ...safeUser } = user;
 
     // Track user login activity
-    db.recordUserLogin(user.id, user.name, user.email, getClientIp(req), req.headers['user-agent'] as string).catch(() => {});
+    db.recordUserLogin(user.id, user.name, getClientIp(req), req.headers['user-agent'] as string).catch(() => {});
 
     return res.json({ user: safeUser, token });
   } catch (err: any) {
@@ -283,7 +269,6 @@ authRouter.get('/me', requireAuth, (req: any, res) => {
     db.recordUserLogin(
       req.user.id,
       req.user.name,
-      req.user.email,
       getClientIp(req),
       (req.headers['user-agent'] as string) || 'Unknown'
     ).catch(() => {});
@@ -307,7 +292,6 @@ authRouter.post('/ping-active', requireAuth, async (req: any, res) => {
     await db.recordUserLogin(
       userId,
       req.user.name,
-      req.user.email,
       getClientIp(req),
       (req.headers['user-agent'] as string) || 'Unknown'
     );
@@ -349,12 +333,12 @@ authRouter.post('/forgot-password/lookup', async (req, res) => {
   try {
     const { identifier } = req.body;
     if (!identifier || !identifier.trim()) {
-      return res.status(400).json({ error: 'Please enter your name or email' });
+      return res.status(400).json({ error: 'Please enter your username' });
     }
 
     const user = await db.findUserByIdentifier(identifier.trim());
     if (!user) {
-      return res.status(404).json({ error: 'No account found with this name or email' });
+      return res.status(404).json({ error: 'No account found with this username' });
     }
 
     if (!user.securityQuestionsSet) {

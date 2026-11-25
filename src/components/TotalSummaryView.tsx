@@ -55,7 +55,6 @@ export interface PersonGroupDebt {
 export interface ContactSummary {
   userId: string;
   name: string;
-  email: string;
   avatarUrl: string;
   phone?: string;
   qrCodeUrl?: string;
@@ -196,7 +195,6 @@ export const TotalSummaryView: React.FC<TotalSummaryViewProps> = ({
     return allUsers.find(u => u.id === focalUserId) || {
       id: focalUserId,
       name: 'Member',
-      email: '',
       avatarUrl: '',
       preferredCurrency: user?.preferredCurrency || 'INR'
     };
@@ -204,9 +202,9 @@ export const TotalSummaryView: React.FC<TotalSummaryViewProps> = ({
 
   // List of unique members available across all groups for profile switching
   const networkMembers = useMemo(() => {
-    const map = new Map<string, { id: string; name: string; avatarUrl: string; email: string }>();
+    const map = new Map<string, { id: string; name: string; avatarUrl: string }>();
     if (user) {
-      map.set(user.id, { id: user.id, name: `${user.name} (You)`, avatarUrl: user.avatarUrl, email: user.email });
+      map.set(user.id, { id: user.id, name: `${user.name} (You)`, avatarUrl: user.avatarUrl });
     }
     for (const g of groups) {
       for (const m of g.members) {
@@ -214,8 +212,7 @@ export const TotalSummaryView: React.FC<TotalSummaryViewProps> = ({
           map.set(m.userId, {
             id: m.userId,
             name: m.name,
-            avatarUrl: m.avatarUrl,
-            email: m.email
+            avatarUrl: m.avatarUrl
           });
         }
       }
@@ -228,7 +225,7 @@ export const TotalSummaryView: React.FC<TotalSummaryViewProps> = ({
     if (!focalUserId) return [];
 
     const contactsMap = new Map<string, {
-      user: { id: string; name: string; email: string; avatarUrl: string; phone?: string; qrCodeUrl?: string; upiId?: string };
+      user: { id: string; name: string; avatarUrl: string; phone?: string; qrCodeUrl?: string; upiId?: string };
       debtsByGroup: Map<string, PersonGroupDebt>;
     }>();
 
@@ -240,7 +237,6 @@ export const TotalSummaryView: React.FC<TotalSummaryViewProps> = ({
           user: {
             id,
             name: found?.name || fallbackName,
-            email: found?.email || '',
             avatarUrl: found?.avatarUrl || fallbackAvatar,
             phone: found?.phone,
             qrCodeUrl: found?.qrCodeUrl,
@@ -310,7 +306,6 @@ export const TotalSummaryView: React.FC<TotalSummaryViewProps> = ({
       list.push({
         userId: otherId,
         name: entry.user.name,
-        email: entry.user.email,
         avatarUrl: entry.user.avatarUrl,
         phone: entry.user.phone,
         qrCodeUrl: entry.user.qrCodeUrl,
@@ -361,7 +356,6 @@ export const TotalSummaryView: React.FC<TotalSummaryViewProps> = ({
     return contactSummaries.filter(c => {
       const matchSearch =
         c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
         c.groupDebts.some(g => g.groupName.toLowerCase().includes(searchTerm.toLowerCase()));
 
       if (!matchSearch) return false;
@@ -718,7 +712,6 @@ export const TotalSummaryView: React.FC<TotalSummaryViewProps> = ({
                         const found = allUsers.find(u => u.id === contact.userId) || {
                           id: contact.userId,
                           name: contact.name,
-                          email: contact.email,
                           avatarUrl: contact.avatarUrl,
                           phone: contact.phone,
                           upiId: contact.upiId
@@ -745,7 +738,7 @@ export const TotalSummaryView: React.FC<TotalSummaryViewProps> = ({
                           <CreditCard className="w-3.5 h-3.5 text-indigo-500 flex-shrink-0" title="UPI Payment Available" />
                         </h3>
                         <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                          {contact.email || `${contact.involvedGroupsCount} shared groups`}
+                          {contact.phone || `${contact.involvedGroupsCount} shared groups`}
                         </p>
                       </div>
                     </div>
@@ -1125,7 +1118,7 @@ export const TotalSummaryView: React.FC<TotalSummaryViewProps> = ({
                           <div className="flex flex-col sm:flex-row items-center gap-2">
                             <div className="w-full flex-1 flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-mono">
                               <span className="truncate pr-1 text-slate-900 dark:text-white font-bold">
-                                {selectedContact.upiId || selectedContact.phone || selectedContact.email}
+                                {selectedContact.upiId || selectedContact.phone || 'No UPI ID'}
                               </span>
                               {(selectedContact.upiId || selectedContact.phone) && (
                                 <button
@@ -1146,7 +1139,7 @@ export const TotalSummaryView: React.FC<TotalSummaryViewProps> = ({
                             </div>
 
                             <a
-                              href={`upi://pay?pa=${encodeURIComponent(selectedContact.upiId || selectedContact.phone || selectedContact.email)}&pn=${encodeURIComponent(selectedContact.name)}&am=${Math.abs(selectedContact.netCombined)}&cu=INR&tn=${encodeURIComponent('Hisaabdo Consolidated Settlement')}`}
+                              href={`upi://pay?pa=${encodeURIComponent(selectedContact.upiId || selectedContact.phone || '')}&pn=${encodeURIComponent(selectedContact.name)}&am=${Math.abs(selectedContact.netCombined)}&cu=INR&tn=${encodeURIComponent('Hisaabdo Consolidated Settlement')}`}
                               className="w-full sm:w-auto py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition text-center whitespace-nowrap shadow-sm shadow-indigo-600/30"
                             >
                               <CreditCard className="w-3.5 h-3.5" />

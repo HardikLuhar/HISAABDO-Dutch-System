@@ -251,7 +251,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
 
     if (expenseToEdit) {
       const isCreator = Boolean(user?.id && expenseToEdit.createdBy === user.id);
-      const isHardik = Boolean((user?.name && user.name.trim().toLowerCase() === 'hardik') || (user?.email && user.email.toLowerCase().includes('hardik')));
+      const isHardik = Boolean((user?.name && user.name.trim().toLowerCase() === 'hardik') || user?.id === 'usr_1790144443747_nlsoi');
       const isGroupAdmin = currentGroup?.members.some(m => m.userId === user?.id && m.role === 'admin');
       if (!isCreator && !isHardik && !isGroupAdmin) {
         showToast('Only the member who added this expense (or admin) can edit it', 'error');

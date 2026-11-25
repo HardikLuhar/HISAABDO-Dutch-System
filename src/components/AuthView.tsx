@@ -6,7 +6,6 @@ import { api } from '../services/api';
 import { SECURITY_QUESTIONS } from './SecurityQuestionsSetupModal';
 import {
   User as UserIcon,
-  Mail,
   Lock,
   Coins,
   ArrowRight,
@@ -41,7 +40,6 @@ export const AuthView: React.FC = () => {
 
   // Register form state
   const [registerName, setRegisterName] = useState('');
-  const [registerEmail, setRegisterEmail] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
   const [registerCurrency, setRegisterCurrency] = useState<CurrencyCode>('INR');
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);
@@ -88,7 +86,7 @@ export const AuthView: React.FC = () => {
     const cleanPass = loginPassword.trim();
 
     if (!cleanId) {
-      showToast('Please enter your name or email', 'error');
+      showToast('Please enter your username', 'error');
       return;
     }
     if (!cleanPass) {
@@ -111,7 +109,6 @@ export const AuthView: React.FC = () => {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanName = registerName.trim();
-    const cleanEmail = registerEmail.trim();
     const cleanPass = registerPassword.trim();
 
     if (!cleanName) {
@@ -129,7 +126,7 @@ export const AuthView: React.FC = () => {
 
     setIsLoading(true);
     try {
-      await quickStart(cleanName, registerCurrency, cleanPass, cleanEmail || undefined);
+      await quickStart(cleanName, registerCurrency, cleanPass);
       showToast(`Account created and secured! Welcome, ${cleanName}!`, 'success');
     } catch (err: any) {
       showToast(err.message || 'Could not create account', 'error');
@@ -143,7 +140,7 @@ export const AuthView: React.FC = () => {
     e.preventDefault();
     const cleanId = forgotIdentifier.trim();
     if (!cleanId) {
-      showToast('Please enter your name or email', 'error');
+      showToast('Please enter your username', 'error');
       return;
     }
 
@@ -264,7 +261,7 @@ export const AuthView: React.FC = () => {
           </div>
           <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
             {mode === 'login'
-              ? 'Enter your registered name or email and password to access your groups and expenses.'
+              ? 'Enter your registered name and password to access your groups and expenses.'
               : mode === 'forgot'
               ? 'Answer your security questions to verify your identity and set a new password.'
               : 'Enter your name, pick your currency, and set a password to create your account.'}
@@ -294,20 +291,20 @@ export const AuthView: React.FC = () => {
                   <div className="flex items-start gap-2">
                     <KeyRound className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
                     <p className="text-[11px] text-amber-800 dark:text-amber-300 leading-relaxed">
-                      Enter your <strong>name or email</strong> to look up your account. You'll need to answer your 3 security questions to reset the password.
+                      Enter your <strong>username or name</strong> to look up your account. You'll need to answer your 3 security questions to reset the password.
                     </p>
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                    Your Name or Email
+                    Your Username / Name
                   </label>
                   <div className="relative">
                     <UserIcon className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                     <input
                       type="text"
-                      placeholder="e.g. Hardik, sneha@..."
+                      placeholder="e.g. Hardik, Alex"
                       value={forgotIdentifier}
                       onChange={(e) => setForgotIdentifier(e.target.value)}
                       autoFocus
@@ -456,13 +453,13 @@ export const AuthView: React.FC = () => {
           <form onSubmit={handleLogin} className="p-6 space-y-4">
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                Your Name or Email
+                Your Username / Name
               </label>
               <div className="relative">
                 <UserIcon className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
-                  placeholder="e.g. Hardik or hardik@example.com"
+                  placeholder="e.g. Hardik, Alex"
                   value={loginIdentifier}
                   onChange={(e) => setLoginIdentifier(e.target.value)}
                   autoFocus
@@ -570,23 +567,6 @@ export const AuthView: React.FC = () => {
               {nameCheckStatus === 'checking' && (
                 <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">Checking availability...</p>
               )}
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                Email Address <span className="text-slate-400 font-normal">(optional - keeps groups synced)</span>
-              </label>
-              <div className="relative">
-                <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type="email"
-                  placeholder="e.g. hardik@example.com"
-                  value={registerEmail}
-                  onChange={(e) => setRegisterEmail(e.target.value)}
-                  className="w-full pl-10 pr-3.5 py-2.5 text-xs font-medium bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 dark:text-white transition"
-                  id="input-register-email"
-                />
-              </div>
             </div>
 
             <div>

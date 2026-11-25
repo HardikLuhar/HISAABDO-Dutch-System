@@ -58,7 +58,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [activitySearch, setActivitySearch] = useState('');
 
   const currency = user?.preferredCurrency || 'INR';
-  const isHardik = Boolean((user?.name && user.name.trim().toLowerCase() === 'hardik') || (user?.email && user.email.toLowerCase().includes('hardik')));
+  const isHardik = Boolean((user?.name && user.name.trim().toLowerCase() === 'hardik') || user?.id === 'usr_1790144443747_nlsoi');
 
   // Calculate global summary across all groups
   let totalYouAreOwed = 0;

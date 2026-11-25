@@ -7,7 +7,6 @@ export type CurrencyCode = 'INR' | 'USD' | 'EUR' | 'GBP';
 export interface User {
   id: string;
   name: string;
-  email: string;
   avatarUrl: string;
   phone?: string;
   preferredCurrency: CurrencyCode;
@@ -21,7 +20,6 @@ export interface User {
 export interface GroupMemberInfo {
   userId: string;
   name: string;
-  email: string;
   avatarUrl: string;
   role: 'admin' | 'member';
   memberPasscode?: string;
@@ -116,7 +114,6 @@ export interface SettlementItem {
 export interface MemberBalance {
   userId: string;
   name: string;
-  email: string;
   avatarUrl: string;
   paid: number;
   share: number;
@@ -225,7 +222,6 @@ export interface UserLoginRecord {
   id: string;
   userId: string;
   userName: string;
-  userEmail: string;
   ipAddress?: string;
   userAgent?: string;
   createdAt: string;

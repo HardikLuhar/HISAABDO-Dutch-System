@@ -113,7 +113,7 @@ async function runBenchmarks() {
     const ledgerTime = t3 - t2;
 
     // 3. Measure Old System (Group balances + Greedy min-cash-flow solver)
-    const usersMap = new Map(members.map(m => [m.userId, { id: m.userId, name: m.userId, email: '', passwordHash: '', avatarUrl: '', preferredCurrency: 'INR' as const, createdAt: '' }]));
+    const usersMap = new Map(members.map(m => [m.userId, { id: m.userId, name: m.userId, passwordHash: '', avatarUrl: '', preferredCurrency: 'INR' as const, createdAt: '' }]));
     const t4 = performance.now();
     const { netMap } = calculateGroupBalances(members, usersMap, expenses, []);
     const greedyResult = simplifyDebts(netMap);

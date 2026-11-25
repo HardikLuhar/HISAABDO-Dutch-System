@@ -265,7 +265,7 @@ expensesRouter.put('/:groupId/expenses/:id', requireAuth, async (req: any, res) 
 
     // Permission check: only the creator who added this expense or admin Hardik (or group admin) can edit
     const isCreator = existing.createdBy === req.user.id;
-    const isHardik = Boolean((req.user.name && req.user.name.trim().toLowerCase() === 'hardik') || (req.user.email && req.user.email.toLowerCase().includes('hardik')));
+    const isHardik = Boolean((req.user.name && req.user.name.trim().toLowerCase() === 'hardik') || req.user.id === 'usr_1790144443747_nlsoi');
     const group = await db.getGroupById(groupId);
     const isGroupAdmin = group?.members.some((m: any) => m.userId === req.user.id && m.role === 'admin');
 
@@ -384,7 +384,7 @@ expensesRouter.delete('/:groupId/expenses/:id', requireAuth, async (req: any, re
 
     // Check if the current user is the person who added this expense entry or admin Hardik (or group admin)
     const isCreator = existing.createdBy === req.user.id;
-    const isHardik = Boolean((req.user.name && req.user.name.trim().toLowerCase() === 'hardik') || (req.user.email && req.user.email.toLowerCase().includes('hardik')));
+    const isHardik = Boolean((req.user.name && req.user.name.trim().toLowerCase() === 'hardik') || req.user.id === 'usr_1790144443747_nlsoi');
     const group = await db.getGroupById(groupId);
     const isGroupAdmin = group?.members.some((m: any) => m.userId === req.user.id && m.role === 'admin');
 

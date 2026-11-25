@@ -456,7 +456,6 @@ export function calculateGroupBalances(
     balances.push({
       userId: m.userId,
       name: user ? user.name : 'Unknown Member',
-      email: user ? user.email : '',
       avatarUrl: user ? user.avatarUrl : '',
       paid,
       share,

@@ -68,10 +68,10 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 
 export const api = {
   // Auth
-  async quickStart(name: string, preferredCurrency: CurrencyCode = 'INR', password?: string, email?: string): Promise<{ user: User; token: string }> {
+  async quickStart(name: string, preferredCurrency: CurrencyCode = 'INR', password?: string): Promise<{ user: User; token: string }> {
     const res = await request<{ user: User; token: string }>('/api/auth/quick-start', {
       method: 'POST',
-      body: JSON.stringify({ name, preferredCurrency, password, email })
+      body: JSON.stringify({ name, preferredCurrency, password })
     });
     setStoredToken(res.token);
     return res;
@@ -80,13 +80,13 @@ export const api = {
   async login(identifier: string, password: string): Promise<{ user: User; token: string }> {
     const res = await request<{ user: User; token: string }>('/api/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ identifier, email: identifier, password })
+      body: JSON.stringify({ identifier, password })
     });
     setStoredToken(res.token);
     return res;
   },
 
-  async register(data: { name: string; email?: string; password?: string; phone?: string; preferredCurrency?: CurrencyCode }): Promise<{ user: User; token: string }> {
+  async register(data: { name: string; password?: string; phone?: string; preferredCurrency?: CurrencyCode }): Promise<{ user: User; token: string }> {
     const res = await request<{ user: User; token: string }>('/api/auth/register', {
       method: 'POST',
       body: JSON.stringify(data)
@@ -176,7 +176,7 @@ export const api = {
     return request<{ groups: Array<{ groupId: string; groupName: string; category: string; defaultCurrency: string; directDebts: Array<{ fromUserId: string; fromName: string; fromAvatar: string; toUserId: string; toName: string; toAvatar: string; amount: number }> }> }>('/api/groups/summary/total');
   },
 
-  async createGroup(data: { name: string; description?: string; category?: GroupCategory; defaultCurrency?: CurrencyCode; memberEmails?: string[] }): Promise<{ group: GroupDetail }> {
+  async createGroup(data: { name: string; description?: string; category?: GroupCategory; defaultCurrency?: CurrencyCode; memberNames?: string[] }): Promise<{ group: GroupDetail }> {
     return request<{ group: GroupDetail }>('/api/groups', {
       method: 'POST',
       body: JSON.stringify(data)

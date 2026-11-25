@@ -129,7 +129,6 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
     const q = searchQuery.toLowerCase().trim();
     return users.filter(u =>
       (u.name || '').toLowerCase().includes(q) ||
-      (u.email || '').toLowerCase().includes(q) ||
       (u.id || '').toLowerCase().includes(q) ||
       (u.phone || '').toLowerCase().includes(q)
     );
@@ -155,7 +154,6 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
     try {
       const res = await api.updateAdminUser(editingUser.id, {
         name: editingUser.name,
-        email: editingUser.email,
         phone: editingUser.phone,
         upiId: editingUser.upiId,
         preferredCurrency: editingUser.preferredCurrency
@@ -541,7 +539,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search users by name, email, ID, or phone..."
+                    placeholder="Search users by name, ID, or phone..."
                     className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                   {searchQuery && (
@@ -600,7 +598,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
                                       </span>
                                     )}
                                   </div>
-                                  <div className="text-[11px] text-slate-400">{user.email}</div>
+                                  <div className="text-[11px] text-slate-400">{user.phone || 'No phone'}</div>
                                 </div>
                               </div>
                             </td>
@@ -778,7 +776,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
                                 {entry.userName}
                               </div>
                               <div className="text-[11px] text-slate-400 font-mono">
-                                {entry.userEmail || entry.userId}
+                                {entry.userId}
                               </div>
                             </td>
                             <td className="py-3 px-4">
@@ -984,7 +982,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
                   />
                   <div>
                     <h4 className="text-xl font-black">{selectedUserDetail.user.name}</h4>
-                    <p className="text-xs text-slate-400">{selectedUserDetail.user.email}</p>
+                    <p className="text-xs text-slate-400">{selectedUserDetail.user.phone || 'No phone'}</p>
                     <code className="text-[11px] text-slate-500 font-mono">{selectedUserDetail.user.id}</code>
                   </div>
                 </div>
@@ -1073,17 +1071,6 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
                     type="text"
                     value={editingUser.name}
                     onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
-                    required
-                    className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Email Address</label>
-                  <input
-                    type="email"
-                    value={editingUser.email}
-                    onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
                     required
                     className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
                   />

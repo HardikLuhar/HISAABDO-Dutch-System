@@ -8,7 +8,6 @@ import {
   X,
   Copy,
   Check,
-  Mail,
   Phone,
   CreditCard,
   ShieldCheck,
@@ -63,7 +62,7 @@ export const MemberProfileModal: React.FC<MemberProfileModalProps> = ({
     setTimeout(() => setCopiedUpi(false), 2000);
   };
 
-  const upiIntentUrl = `upi://pay?pa=${encodeURIComponent(upiId || member.email)}&pn=${encodeURIComponent(member.name)}&cu=INR&tn=${encodeURIComponent('Hisaabdo Settlement')}`;
+  const upiIntentUrl = upiId ? `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(member.name)}&cu=INR&tn=${encodeURIComponent('Hisaabdo Settlement')}` : '';
 
   return (
     <div
@@ -111,10 +110,6 @@ export const MemberProfileModal: React.FC<MemberProfileModalProps> = ({
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 truncate flex items-center gap-1.5 mt-0.5">
-                <Mail className="w-3.5 h-3.5" />
-                <span>{member.email}</span>
-              </p>
               {member.phone && (
                 <p className="text-xs text-slate-500 dark:text-slate-400 truncate flex items-center gap-1.5 mt-0.5">
                   <Phone className="w-3.5 h-3.5" />
@@ -162,7 +157,7 @@ export const MemberProfileModal: React.FC<MemberProfileModalProps> = ({
               <div className="min-w-0 flex-1">
                 <span className="text-[10px] text-slate-400 block font-medium">UPI ID / VPA</span>
                 <span className="text-sm font-mono font-bold text-slate-900 dark:text-white truncate block">
-                  {upiId || member.email}
+                  {upiId || 'Not provided'}
                 </span>
               </div>
               {upiId && (
